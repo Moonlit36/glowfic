@@ -326,9 +326,6 @@ ActiveRecord::Schema.define(version: 2020_04_16_173619) do
     t.integer "board_id", null: false
     t.integer "user_id", null: false
     t.string "subject", null: false
-    t.text "content"
-    t.integer "character_id"
-    t.integer "icon_id"
     t.integer "privacy", default: 0, null: false
     t.datetime "created_at"
     t.datetime "updated_at"
@@ -341,13 +338,9 @@ ActiveRecord::Schema.define(version: 2020_04_16_173619) do
     t.datetime "edited_at"
     t.datetime "tagged_at"
     t.boolean "authors_locked", default: false
-    t.integer "character_alias_id"
     t.index "to_tsvector('english'::regconfig, COALESCE((subject)::text, ''::text))", name: "idx_fts_post_subject", using: :gin
-    t.index "to_tsvector('english'::regconfig, COALESCE(content, ''::text))", name: "idx_fts_post_content", using: :gin
     t.index ["board_id"], name: "index_posts_on_board_id"
-    t.index ["character_id"], name: "index_posts_on_character_id"
     t.index ["created_at"], name: "index_posts_on_created_at"
-    t.index ["icon_id"], name: "index_posts_on_icon_id"
     t.index ["tagged_at"], name: "index_posts_on_tagged_at"
     t.index ["user_id"], name: "index_posts_on_user_id"
   end

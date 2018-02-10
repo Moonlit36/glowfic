@@ -205,9 +205,7 @@ class CharactersController < ApplicationController
     end
     @alt = @alts.first
 
-    reply_post_ids = Reply.where(character_id: @character.id).select(:post_id).distinct.pluck(:post_id)
-    all_posts = Post.where(character_id: @character.id) + Post.where(id: reply_post_ids)
-    @posts = all_posts.uniq
+    @posts = Post.where(id: Reply.where(character_id: @character.id).select(:post_id).distinct.pluck(:post_id))
   end
 
   def do_replace
@@ -252,8 +250,6 @@ class CharactersController < ApplicationController
     wheres[:character_alias_id] = orig_alias.try(:id) if @character.aliases.exists? && params[:orig_alias] != 'all'
 
     UpdateModelJob.perform_later(Reply.to_s, wheres, updates)
-    wheres[:id] = wheres.delete(:post_id) if params[:post_ids].present?
-    UpdateModelJob.perform_later(Post.to_s, wheres, updates)
 
     flash[:success] = "All uses of this character#{success_msg} will be replaced."
     redirect_to character_path(@character)
@@ -372,8 +368,7 @@ class CharactersController < ApplicationController
     linked << "Setting".pluralize(settings.count) + ": " + settings.join(', ') if settings.present?
     desc = [linked.join('. ')].reject(&:blank?)
     desc << generate_short(@character.description) if @character.description.present?
-    reply_posts = Reply.where(character_id: @character.id).select(:post_id).distinct.pluck(:post_id)
-    posts_count = Post.where(character_id: @character.id).or(Post.where(id: reply_posts)).privacy_public.uniq.count
+    posts_count = Reply.where(character_id: @character.id).privacy_public.select(:post_id).distinct.count
     desc << "#{posts_count} #{'post'.pluralize(posts_count)}" if posts_count > 0
     data = {
       url: character_url(@character),

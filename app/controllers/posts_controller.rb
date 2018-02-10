@@ -449,10 +449,6 @@ class PostsController < WritableController
       :privacy,
       :subject,
       :description,
-      :content,
-      :character_id,
-      :icon_id,
-      :character_alias_id,
       :authors_locked,
       :audit_comment,
       :private_note
@@ -467,5 +463,15 @@ class PostsController < WritableController
     end
 
     params.fetch(:post, {}).permit(allowed_params)
+  end
+
+  def written_params
+    params.fetch(:reply, {}).permit(
+      :content,
+      :character_id,
+      :icon_id,
+      :character_alias_id,
+      :audit_comment,
+    )
   end
 end

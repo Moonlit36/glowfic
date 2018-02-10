@@ -158,8 +158,8 @@ class PostScraper < Object
     @post.board_id = @board_id
     @post.section_id = @section_id
     @post.subject = subject
-    @post.content = strip_content(content)
-    @post.created_at = @post.updated_at = @post.edited_at = created_at
+    @post.written.content = strip_content(content)
+    @post.created_at = @post.updated_at = @post.edited_at = @post.written.created_at = @post.written.updated_at = created_at
     @post.status = @status
     @post.is_import = true
 

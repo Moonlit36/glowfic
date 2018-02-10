@@ -40,6 +40,7 @@ class Post < ApplicationRecord
   validates :description, length: { maximum: 255 }
   validate :valid_board, :valid_board_section
 
+  after_initialize :create_written, if: :new_record?
   before_create :build_initial_flat_post, :set_timestamps
   after_create :create_written
   before_update :set_timestamps
@@ -329,31 +330,6 @@ class Post < ApplicationRecord
   end
 
   def create_written
-    self.written = Reply.create!(
-      post: self,
-      reply_order: 0,
-      user: user,
-      content: content,
-      icon: icon,
-      character: character,
-      character_alias: character_alias,
-      created_at: created_at,
-      updated_at: edited_at,
-      skip_regenerate: true,
-    )
-  end
-
-  WRITTEN_ATTRS = %w(content icon_id character_alias_id character_id)
-
-  def update_written
-    return unless written.present?
-    return if (changed_attributes.keys - WRITTEN_ATTRS).empty?
-    written.update!(
-      content: content,
-      icon: icon,
-      character: character,
-      character_alias: character_alias,
-      updated_at: edited_at,
-    )
+    self.written ||= self.replies.build(reply_order: 0, user: self.user)
   end
 end

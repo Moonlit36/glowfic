@@ -154,13 +154,9 @@ class PostScraper < Object
     created_at = doc.at_css('.entry .datetime').text
     content = doc.at_css('.entry-content').inner_html
 
-    @post = Post.new
-    @post.board_id = @board_id
-    @post.section_id = @section_id
-    @post.subject = subject
+    @post = Post.new(board_id: @board_id, section_id: @section_id, status: @status, subject: subject)
     @post.written.content = strip_content(content)
     @post.created_at = @post.updated_at = @post.edited_at = @post.written.created_at = @post.written.updated_at = created_at
-    @post.status = @status
     @post.is_import = true
 
     # detect already imported
@@ -169,10 +165,11 @@ class PostScraper < Object
       raise AlreadyImportedError.new("This thread has already been imported", subj_post.id)
     end
 
-    set_from_username(@post, username)
+    set_from_username(@post.written, username)
+    @post.user = @post.written.user
     @post.last_user_id = @post.user_id
 
-    set_from_icon(@post, img_url, img_keyword)
+    set_from_icon(@post.written, img_url, img_keyword)
 
     Audited.audit_class.as_user(@post.user) do
       @post.save!

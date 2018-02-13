@@ -58,7 +58,6 @@ class Post < ApplicationRecord
     :search,
     against: %i(
       subject
-      content
     ),
     using: { tsearch: { dictionary: "english" } },
   )

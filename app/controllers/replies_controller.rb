@@ -35,6 +35,7 @@ class RepliesController < WritableController
 
     searcher = Reply::Searcher.new(templates: @templates, users: @users)
     @search_results = searcher.search(params, post: @post, page: page)
+    @search_results = @search_results.visible_to(current_user)
     @templates = searcher.templates
     @users = searcher.users
   end

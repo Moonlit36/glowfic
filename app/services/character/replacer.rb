@@ -7,10 +7,8 @@ class Character::Replacer < Generic::Replacer
   end
 
   def setup(no_icon_url)
-    @alts = find_alts
-    @gallery = construct_gallery(no_icon_url)
+    super
     @alt_dropdown = construct_dropdown
-    @posts = find_posts
   end
 
   def replace(params, user:)
@@ -28,9 +26,7 @@ class Character::Replacer < Generic::Replacer
     updates = {character_id: new_char.try(:id)}
     updates[:character_alias_id] = new_alias.id if new_alias.present?
 
-    UpdateModelJob.perform_later(Reply.to_s, wheres, updates)
-    wheres[:id] = wheres.delete(:post_id) if params[:post_ids].present?
-    UpdateModelJob.perform_later(Post.to_s, wheres, updates)
+    replace_jobs(wheres: wheres, updates: updates, post_ids: params[:post_ids])
   end
 
   private

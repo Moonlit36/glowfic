@@ -1,8 +1,10 @@
 class AddEditorModeToReplies < ActiveRecord::Migration[5.2]
   def up
     add_column :replies, :editor_mode, :string
+    add_column :reply_drafts, :editor_mode, :string
 
-    Reply.all.each do |reply|
+    replies = Reply.all + ReplyDraft.all
+    replies.each do |reply|
       if reply.content[/<p( [^>]*)?>/] || reply.content[/<br *\/?>/]
         reply.update_columns(editor_mode: 'rtf')
       else
@@ -13,5 +15,6 @@ class AddEditorModeToReplies < ActiveRecord::Migration[5.2]
 
   def down
     remove_column :replies, :editor_mode, :string
+    remove_column :reply_drafts, :editor_mode, :string
   end
 end

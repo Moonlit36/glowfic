@@ -23,7 +23,7 @@ gem 'nokogiri'
 gem 'pg', '~> 0.21.0'
 gem 'pg_search'
 gem 'rack-pratchett'
-gem 'rails', '~> 5.2.0'
+gem 'rails', '6.0.0.rc1'
 gem 'redis', '~> 3.3.5' # until resque updates to support Redis 4
 gem 'redis-rails'
 gem 'resque'
@@ -54,7 +54,7 @@ group :development do
   gem 'rubocop-performance', '~> 1.4.0', require: false
   gem 'rubocop-rails', '~> 2.2.1', require: false
   gem 'traceroute'
-  gem 'web-console', '~> 3.0'
+  gem 'web-console', '~> 4.0'
 end
 
 group :development, :test do

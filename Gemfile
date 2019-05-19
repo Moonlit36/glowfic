@@ -63,7 +63,7 @@ group :development, :test do
   gem 'dotenv-rails'
   gem "html-proofer"
   gem 'rake', '~> 12.0'
-  gem 'rspec-rails'
+  gem 'rspec-rails', '4.0.0.beta2'
   gem 'seed_dump', '~> 3.2'
   gem 'thin'
 end

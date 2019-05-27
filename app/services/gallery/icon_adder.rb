@@ -21,11 +21,10 @@ class Gallery::IconAdder < Object
       end
       @success_message = "Icons added to gallery successfully."
     else
-      icons = (@params[:icons] || []).reject { |icon| icon.values.all?(&:blank?) }
+      @icons = (@params[:icons] || []).reject { |icon| icon.values.all?(&:blank?) }
       raise NoIconsError, "You have to enter something." if icons.empty?
 
       failed = false
-      @icons = icons
       icons = []
       @icons.each_with_index do |icon, index|
         icon = Icon.new(icon_params(icon.except('filename', 'file')))
@@ -40,13 +39,11 @@ class Gallery::IconAdder < Object
 
       raise InvalidIconsError, "Your icons could not be saved." if failed
 
-      if icons.empty?
-        @icons = []
-        raise SaveFailedError, "Your icons could not be saved."
-      elsif icons.all?(&:save)
-        @success_message = "Icons saved successfully."
+      if icons.all?(&:save)
         icons.each { |icon| @gallery.icons << icon } if @gallery
+        @success_message = "Icons saved successfully."
       else
+        @icons = [] if icons.empty?
         raise SaveFailedError, "Your icons could not be saved."
       end
     end

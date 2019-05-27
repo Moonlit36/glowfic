@@ -126,7 +126,11 @@ class GalleriesController < UploadingController
     adder = Gallery::IconAdder.new(@gallery, user: current_user, params: params)
 
     begin
-      adder.add
+      if params[:image_ids].present?
+        adder.assign_existing
+      else
+        adder.create_new
+      end
     rescue NoIconsError, MissingGalleryError, SaveFailedError, ActiveRecord::RecordInvalid => e
       @icons = adder.icons
       if e.class == InvalidIconsError

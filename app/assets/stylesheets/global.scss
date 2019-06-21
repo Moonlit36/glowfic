@@ -117,6 +117,8 @@ button, .button {
 
 .even, .post-post, #post-editor { background-color: $bg_color_even; }
 
+.odd, .post-post + #post-editor, .post-post + a + #post-editor { background-color: $bg_color_odd; }
+
 table.alternating tbody {
   tr td { padding: 5px; }
   tr:nth-child(2n+1) td { background-color: $bg_color_even; }
@@ -147,8 +149,6 @@ div.alternating {
   .post-container:nth-child(even) { background-color: $bg_color_even; }
   .post-container:nth-child(odd) { background-color: $bg_color_odd; }
 }
-
-.odd, .post-post + #post-editor, .post-post + a + #post-editor { background-color: $bg_color_odd; }
 
 /* UI Links */
 .link-box {

@@ -24,7 +24,7 @@
       - @posts.each do |post|
         %tr
           - klass = ignored?(post) ? 'post-ignored' : ''
-          %td.vtop.post-completed{class: klass.dup.push(post.completed? ? 'post-complete' : 'post-incomplete')}
+          %td.vtop.post-completed{class: klass + (post.completed? ? ' post-complete' : ' post-incomplete')}
             - if post.completed?
               = image_tag "icons/book.png", class: 'vmid', title: "Thread Complete"
             - if post.on_hiatus?

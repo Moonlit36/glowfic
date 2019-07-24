@@ -131,7 +131,7 @@ class GalleriesController < UploadingController
       else
         adder.create_new
       end
-    rescue NoIconsError, MissingGalleryError, SaveFailedError, ActiveRecord::RecordInvalid => e
+    rescue NoIconsError, MissingGalleryError, ActiveRecord::RecordInvalid => e
       @icons = adder.icons
       if e.class == InvalidIconsError
         flash[:error] = {

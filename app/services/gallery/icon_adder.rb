@@ -13,11 +13,8 @@ class Gallery::IconAdder < Object
 
     icon_ids = @params[:image_ids].split(',').map(&:to_i).reject(&:zero?)
     icon_ids -= @gallery.icons.pluck(:id)
-    icons = Icon.where(id: icon_ids)
-    icons.each do |icon|
-      next unless icon.user_id == @user.id
-      @gallery.icons << icon
-    end
+    icons = Icon.where(id: icon_ids, user_id: @user.id)
+    icons.each { @gallery.icons << icon }
     @success_message = "Icons added to gallery successfully."
   end
 
@@ -45,7 +42,7 @@ class Gallery::IconAdder < Object
       @success_message = "Icons saved successfully."
     else
       @icons = [] if icons.empty?
-      raise SaveFailedError, "Your icons could not be saved."
+      raise InvalidIconsError, "Your icons could not be saved."
     end
   end
 
@@ -56,5 +53,4 @@ end
 
 class MissingGalleryError < ApiError; end
 class NoIconsError < ApiError; end
-class SaveFailedError < ApiError; end
 class InvalidIconsError < SaveFailedError; end

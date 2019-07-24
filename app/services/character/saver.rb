@@ -1,6 +1,4 @@
 class Character::Saver < Auditable::Saver
-  include Taggable
-
   attr_reader :character
 
   def initialize(character, user:, params:)
@@ -35,6 +33,12 @@ class Character::Saver < Auditable::Saver
     return unless @params[:new_template].present? && @character.user == @user
     @character.build_template unless @character.template
     @character.template.user = @user
+  end
+
+  def process_tags(klass, obj_param, id_param)
+    ids = @params.fetch(obj_param, {}).fetch(id_param, [])
+    processer = Tag::Processer.new(ids, klass: klass, user: @user)
+    processer.process
   end
 
   def permitted_params

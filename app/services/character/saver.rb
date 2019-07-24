@@ -32,8 +32,7 @@ class Character::Saver < Auditable::Saver
   end
 
   def build_template
-    return unless @params[:new_template].present?
-    return unless @character.user == @user
+    return unless @params[:new_template].present? && @character.user == @user
     @character.build_template unless @character.template
     @character.template.user = @user
   end

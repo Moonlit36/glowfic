@@ -65,9 +65,10 @@ class IconsController < UploadingController
   end
 
   def update
-    begin
-      @icon.update!(permitted_params)
-    rescue ActiveRecord::RecordInvalid
+    if @icon.update(permitted_params)
+      flash[:success] = "Icon updated."
+      redirect_to icon_path(@icon)
+    else
       flash.now[:error] = {
         message: "Your icon could not be saved due to the following problems:",
         array: @icon.errors.full_messages
@@ -77,9 +78,6 @@ class IconsController < UploadingController
       use_javascript('galleries/uploader')
       set_s3_url
       render :edit
-    else
-      flash[:success] = "Icon updated."
-      redirect_to icon_path(@icon)
     end
   end
 
@@ -123,18 +121,16 @@ class IconsController < UploadingController
 
   def destroy
     gallery = @icon.galleries.first if @icon.galleries.count == 1
-    begin
-      @icon.destroy!
-    rescue ActiveRecord::RecordNotDestroyed
+    if @icon.destroy
+      flash[:success] = "Icon deleted successfully."
+      redirect_to gallery_path(gallery) and return if gallery
+      redirect_to user_galleries_path(current_user)
+    else
       flash[:error] = {
         message: "Icon could not be deleted.",
         array: @icon.errors.full_messages
       }
       redirect_to icon_path(@icon)
-    else
-      flash[:success] = "Icon deleted successfully."
-      redirect_to gallery_path(gallery) and return if gallery
-      redirect_to user_galleries_path(current_user)
     end
   end
 

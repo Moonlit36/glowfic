@@ -12,21 +12,7 @@ class Reply::Searcher < Generic::Searcher
     search_posts(post, params[:board_id]) if post || params[:board_id].present?
     search_templates(params[:template_id]) if params[:template_id].present?
     select_templates(params[:author_id]) if params[:author_id].present? && params[:template_id].blank?
-
-    @search_results = @search_results
-      .select('replies.*, characters.name, characters.screenname, users.username, users.deleted as user_deleted')
-      .joins(:user)
-      .left_outer_joins(:character)
-      .with_edit_audit_counts
-      .paginate(page: page)
-      .includes(:post)
-
-    unless params[:condensed]
-      @search_results = @search_results
-        .select('icons.keyword, icons.url')
-        .left_outer_joins(:icon)
-    end
-    @search_results
+    format_results(page)
   end
 
   def search_content(content)
@@ -58,6 +44,22 @@ class Reply::Searcher < Generic::Searcher
     elsif board_id.present?
       post_ids = Post.where(board_id: board_id).pluck(:id)
       @search_results = @search_results.where(post_id: post_ids)
+    end
+  end
+
+  def format_results(page)
+    @search_results = @search_results
+      .select('replies.*, characters.name, characters.screenname, users.username, users.deleted as user_deleted')
+      .joins(:user)
+      .left_outer_joins(:character)
+      .with_edit_audit_counts
+      .paginate(page: page)
+      .includes(:post)
+
+    unless params[:condensed]
+      @search_results = @search_results
+        .select('icons.keyword, icons.url')
+        .left_outer_joins(:icon)
     end
   end
 end

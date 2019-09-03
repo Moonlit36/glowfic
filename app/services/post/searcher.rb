@@ -23,17 +23,8 @@ class Post::Searcher < Generic::Searcher
   end
 
   def search_authors(author_ids)
-    post_ids = nil
-    author_ids.each do |author_id|
-      author_posts = PostAuthor.where(user_id: author_id, joined: true).pluck(:post_id)
-      if post_ids.nil?
-        post_ids = author_posts
-      else
-        post_ids &= author_posts
-      end
-      break if post_ids.empty?
-    end
-    @search_results = @search_results.where(id: post_ids.uniq)
+    author_posts = PostAuthor.where(user_id: author_ids, joined: true).select(:post_id).distinct.pluck(:post_id)
+    @search_results = @search_results.where(id: author_posts)
   end
 
   def search_characters(character_id)

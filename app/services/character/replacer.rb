@@ -13,9 +13,11 @@ class Character::Replacer < Generic::Replacer
 
   def replace(params, user:)
     new_char = check_target(params[:icon_dropdown], user: user)
+    return if @errors.present?
 
     orig_alias = check_alias(params[:orig_alias], state: 'old') if params[:orig_alias] != 'all'
     new_alias = check_alias(params[:alias_dropdown], character: new_char, state: 'new')
+    return if @errors.present?
 
     @success_msg = params[:post_ids].present? ? " in the specified " + 'post'.pluralize(params[:post_ids].size) : ''
 

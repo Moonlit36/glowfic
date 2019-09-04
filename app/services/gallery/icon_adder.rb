@@ -1,15 +1,16 @@
 class Gallery::IconAdder < Generic::Service
-  attr_reader :success_message, :errors, :icons
+  attr_reader :success_message, :icon_errors, :icons
 
   def initialize(gallery, user:, params:)
     @gallery = gallery
     @user = user
     @params = params
-    @errors = []
+    @icon_errors = []
+    super()
   end
 
   def assign_existing
-    raise MissingGalleryError, "Gallery could not be found." unless @gallery # gallery required for adding icons from other galleries
+    @errors.add(:gallery, "could not be found.") && return unless @gallery # gallery required for adding icons from other galleries
 
     icon_ids = @params[:image_ids].split(',').map(&:to_i).reject(&:zero?)
     icon_ids -= @gallery.icons.pluck(:id)
@@ -20,7 +21,7 @@ class Gallery::IconAdder < Generic::Service
 
   def create_new
     @icons = (@params[:icons] || []).reject { |icon| icon.values.all?(&:blank?) }
-    raise NoIconsError, "You have to enter something." if icons.empty?
+    @errors.add(:base, "You have to enter something.") && return if icons.empty?
 
     failed = false
     icons = []
@@ -29,20 +30,20 @@ class Gallery::IconAdder < Generic::Service
       icon.user = @user
       unless icon.valid?
         @icons[index]['url'] = @icons[index]['s3_key'] = '' if icon.errors.messages[:url]&.include?('is invalid')
-        @errors += icon.errors.full_messages.map{|m| "Icon "+(index+1).to_s+": "+m.downcase}
+        @icon_errors += icon.errors.full_messages.map{|m| "Icon "+(index+1).to_s+": "+m.downcase}
         failed = true
       end
       icons << icon
     end
 
-    raise InvalidIconsError, "Your icons could not be saved." if failed
+    @errors.add(:icons, "could not be saved.") && return if failed
 
     if icons.all?(&:save)
       icons.each { |icon| @gallery.icons << icon } if @gallery
       @success_message = "Icons saved successfully."
     else
       @icons = [] if icons.empty?
-      raise InvalidIconsError, "Your icons could not be saved."
+      @errors.add(:icons, "could not be saved.")
     end
   end
 
@@ -50,7 +51,3 @@ class Gallery::IconAdder < Generic::Service
     paramset.permit(:url, :keyword, :credit, :s3_key)
   end
 end
-
-class MissingGalleryError < ApiError; end
-class NoIconsError < ApiError; end
-class InvalidIconsError < SaveFailedError; end

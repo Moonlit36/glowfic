@@ -27,15 +27,7 @@ class Gallery::IconAdder < Generic::Service
   end
 
   def validate_icons
-    icons = @icons.map.with_index do |icon, index|
-      icon = Icon.new(icon_params(icon.except('filename', 'file')))
-      icon.user = @user
-      unless icon.valid?
-        @icons[index]['url'] = @icons[index]['s3_key'] = '' if icon.errors.messages[:url]&.include?('is invalid')
-        @icon_errors += icon.errors.full_messages.map{|m| "Icon #{index+1}: "+m.downcase}
-      end
-      icon
-    end
+    icons = @icons.map.with_index { |icon, index| initialize_icon(icon, index) }
     @errors.add(:icons, "could not be saved.") if @icon_errors.present?
     icons
   end
@@ -48,6 +40,16 @@ class Gallery::IconAdder < Generic::Service
       @icons = [] if icons.empty?
       @errors.add(:icons, "could not be saved.")
     end
+  end
+
+  def initialize_icon(icon, index)
+    icon = Icon.new(icon_params(icon.except('filename', 'file')))
+    icon.user = @user
+    unless icon.valid?
+      @icons[index]['url'] = @icons[index]['s3_key'] = '' if icon.errors.messages[:url]&.include?('is invalid')
+      @icon_errors += icon.errors.full_messages.map{|m| "Icon #{index+1}: "+m.downcase}
+    end
+    icon
   end
 
   def icon_params(paramset)

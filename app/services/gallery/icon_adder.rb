@@ -15,7 +15,7 @@ class Gallery::IconAdder < Generic::Service
     icon_ids = @params[:image_ids].split(',').map(&:to_i).reject(&:zero?)
     icon_ids -= @gallery.icons.pluck(:id)
     icons = Icon.where(id: icon_ids, user_id: @user.id)
-    icons.each { @gallery.icons << icon }
+    icons.each { |icon| @gallery.icons << icon }
     @success_message = "Icons added to gallery successfully."
   end
 

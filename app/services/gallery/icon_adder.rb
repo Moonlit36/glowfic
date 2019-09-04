@@ -29,6 +29,7 @@ class Gallery::IconAdder < Generic::Service
   def validate_icons
     icons = @icons.map.with_index { |icon, index| initialize_icon(icon, index) }
     @errors.add(:icons, "could not be saved.") if @icon_errors.present?
+    @icons = [] if icons.empty?
     icons
   end
 
@@ -37,7 +38,6 @@ class Gallery::IconAdder < Generic::Service
       icons.each { |icon| @gallery.icons << icon } if @gallery
       @success_message = "Icons saved successfully."
     else
-      @icons = [] if icons.empty?
       @errors.add(:icons, "could not be saved.")
     end
   end

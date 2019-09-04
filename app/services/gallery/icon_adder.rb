@@ -22,29 +22,26 @@ class Gallery::IconAdder < Generic::Service
   def create_new
     @icons = (@params[:icons] || []).reject { |icon| icon.values.all?(&:blank?) }
     @errors.add(:base, "You have to enter something.") && return if icons.empty?
-    validate_icons
+    icons = validate_icons
     return if @errors.present?
-    save_icons
+    save_icons(icons)
   end
 
   def validate_icons
-    failed = false
-    icons = []
-    @icons.each_with_index do |icon, index|
+    icons = @icons.map.with_index do |icon, index|
       icon = Icon.new(icon_params(icon.except('filename', 'file')))
       icon.user = @user
       unless icon.valid?
         @icons[index]['url'] = @icons[index]['s3_key'] = '' if icon.errors.messages[:url]&.include?('is invalid')
-        @icon_errors += icon.errors.full_messages.map{|m| "Icon "+(index+1).to_s+": "+m.downcase}
-        failed = true
+        @icon_errors += icon.errors.full_messages.map{|m| "Icon #{index+1}: "+m.downcase}
       end
-      icons << icon
+      icon
     end
-
-    @errors.add(:icons, "could not be saved.") if failed
+    @errors.add(:icons, "could not be saved.") if @icon_errors.present?
+    icons
   end
 
-  def save_icons
+  def save_icons(icons)
     if icons.all?(&:save)
       icons.each { |icon| @gallery.icons << icon } if @gallery
       @success_message = "Icons saved successfully."

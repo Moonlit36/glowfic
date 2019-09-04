@@ -1,5 +1,5 @@
 class Gallery::IconAdder < Generic::Service
-  attr_reader :success_message, :icon_errors, :icons
+  attr_reader :icon_errors, :icons
 
   def initialize(gallery, user:, params:)
     @gallery = gallery
@@ -16,7 +16,6 @@ class Gallery::IconAdder < Generic::Service
     icon_ids -= @gallery.icons.pluck(:id)
     icons = Icon.where(id: icon_ids, user_id: @user.id)
     icons.each { |icon| @gallery.icons << icon }
-    @success_message = "Icons added to gallery successfully."
   end
 
   def create_new

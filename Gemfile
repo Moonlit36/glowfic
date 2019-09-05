@@ -61,7 +61,7 @@ group :development, :test do
   gem 'byebug'
   gem 'database_cleaner'
   gem 'dotenv-rails'
-  gem "html-proofer"
+  gem "html-proofer", '3.11.0'
   gem 'rake', '~> 12.0'
   gem 'rspec-rails', '4.0.0.beta2'
   gem 'seed_dump', '~> 3.2'

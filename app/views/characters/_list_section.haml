@@ -34,7 +34,6 @@
       %td.centered.padding-5{colspan: col_count} — No characters yet —
   - else
     %tr
-      - klass = cycle('even', 'odd')
       %td.padding-5
         %b Name
       - if local_assigns[:show_template]
@@ -53,7 +52,6 @@
           %b Setting
       %td.padding-5
     - characters.ordered.each do |character|
-      - klass = cycle('even', 'odd')
       %tr
         %td.padding-5
           = link_to character.name, character_path(character)

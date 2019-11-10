@@ -17,7 +17,7 @@ class Reply < ApplicationRecord
   after_update :update_post
   after_destroy :set_previous_reply_to_last, :remove_post_author
 
-  attr_accessor :skip_notify, :skip_post_update, :is_import, :skip_regenerate
+  attr_accessor :skip_notify, :skip_post_update, :is_import, :skip_regenerate, :skip_draft
 
   pg_search_scope(
     :search,
@@ -81,7 +81,7 @@ class Reply < ApplicationRecord
   end
 
   def destroy_draft
-    return if is_import
+    return if is_import || skip_draft
     ReplyDraft.draft_for(post_id, user_id).try(:destroy)
   end
 

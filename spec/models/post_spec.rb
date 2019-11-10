@@ -21,6 +21,7 @@ RSpec.describe Post do
       end
 
       it "should update tagged_at but not edited_at when content edited" do
+        post.reload.written
         Timecop.freeze(time) do
           post.written.update!(content: 'new content')
         end

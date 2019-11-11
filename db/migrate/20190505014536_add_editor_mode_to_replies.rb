@@ -5,7 +5,7 @@ class AddEditorModeToReplies < ActiveRecord::Migration[5.2]
 
     replies = Reply.all + ReplyDraft.all
     replies.each do |reply|
-      if reply.content[/<p( [^>]*)?>/] || reply.content[/<br *\/?>/]
+      if reply.content.present? && (reply.content[/<p( [^>]*)?>/] || reply.content[/<br *\/?>/])
         reply.update_columns(editor_mode: 'rtf')
       else
         reply.update_columns(editor_mode: 'html')

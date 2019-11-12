@@ -1,5 +1,5 @@
 class PostScraper < Object
-  SANDBOX_ID = Rails.env.production? ? 3 : 5
+  SANDBOX_ID = 3
   BASE_ACCOUNTS = {
     'alicornucopia'      => 'Alicorn',
     'pythbox'            => 'Kappa',

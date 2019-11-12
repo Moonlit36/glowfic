@@ -1,4 +1,4 @@
-class PostScraper < Object
+class PostScraper < Generic::Service
   SANDBOX_ID = 3
   BASE_ACCOUNTS = {
     'alicornucopia'      => 'Alicorn',
@@ -33,6 +33,7 @@ class PostScraper < Object
     @console_import = console
     @threaded_import = threaded # boolean
     @subject = subject
+    super()
   end
 
   def scrape!
@@ -49,6 +50,7 @@ class PostScraper < Object
       end
       finalize_post_data
     end
+    return if @errors.present?
     GenerateFlatPostJob.perform_later(@post.id)
     @post
   end
@@ -58,7 +60,7 @@ class PostScraper < Object
   # "threads" are URL permalinks to the threads to scrape, which it will scrape
   # in the given order
   def scrape_threads!(threads)
-    raise RuntimeError.new('threaded_import must be true to use scrape_threads!') unless @threaded_import
+    @errors.add(:base, 'threaded_import must be true to use scrape_threads!') && return unless @threaded_import
 
     @html_doc = doc_from_url(@url)
     # if threads.blank?
@@ -167,7 +169,8 @@ class PostScraper < Object
     # detect already imported
     # skip if it's a threaded import, unless a subject was given manually
     if (@subject || !@threaded_import) && (subj_post = Post.find_by(subject: @post.subject, board_id: @board_id))
-      raise AlreadyImportedError.new("This thread has already been imported", subj_post.id)
+      @errors.add(:post, "was already imported! #{ScrapePostJob.view_post(subj_post.id)}")
+      raise ActiveRecord::Rollback
     end
 
     set_from_username(@post, username)
@@ -239,11 +242,15 @@ class PostScraper < Object
   end
 
   def prompt_for_user(username)
-    raise UnrecognizedUsernameError.new("Unrecognized username: #{username}") unless @console_import
-    print('User ID or username for ' + username + '? ')
-    input = STDIN.gets.chomp
-    return User.find_by_id(input) if input.to_s == input.to_i.to_s
-    User.where('lower(username) = ?', input.downcase).first
+    if @console_import
+      print('User ID or username for ' + username + '? ')
+      input = STDIN.gets.chomp
+      return User.find_by_id(input) if input.to_s == input.to_i.to_s
+      User.where('lower(username) = ?', input.downcase).first
+    else
+      @errors.add(:base, "Unrecognized username: #{username}")
+      raise ActiveRecord::Rollback
+    end
   end
 
   def set_from_icon(tag, url, keyword)
@@ -320,16 +327,5 @@ class PostScraper < Object
 
   def logger
     Resque.logger
-  end
-end
-
-class UnrecognizedUsernameError < RuntimeError
-end
-
-class AlreadyImportedError < RuntimeError
-  attr_reader :post_id
-  def initialize(msg, post_id)
-    @post_id = post_id
-    super(msg)
   end
 end

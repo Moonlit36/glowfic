@@ -105,7 +105,9 @@ RSpec.describe PostScraper do
     stub_fixture(url, 'scrape_no_replies')
     scraper = PostScraper.new(url)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    expect { scraper.scrape! }.to raise_error(UnrecognizedUsernameError)
+    scraper.scrape!
+    expect(scraper.errors).to be_present
+    expect(scraper.errors.full_messages).to include("Unrecognized username: wild_pegasus_appeared")
   end
 
   it "should raise an error when post is already imported" do
@@ -116,19 +118,21 @@ RSpec.describe PostScraper do
     scraper = PostScraper.new(url, board_id: board.id)
     allow(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
     expect { scraper.scrape! }.to change { Post.count }.by(1)
-    expect { scraper.scrape! }.to raise_error(AlreadyImportedError)
-    expect(Post.count).to eq(1)
+    expect { scraper.scrape! }.not_to change { Post.count }
+    expect(scraper.errors).to be_present
   end
 
   it "should raise an error when post is already imported with given subject" do
     new_title = 'other name'
     board = create(:board)
-    create(:post, board: board, subject: new_title) # post
+    post = create(:post, board: board, subject: new_title)
     url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
     stub_fixture(url, 'scrape_no_replies')
     scraper = PostScraper.new(url, board_id: board.id, subject: new_title)
     allow(scraper.send(:logger)).to receive(:info).with("Importing thread '#{new_title}'")
-    expect { scraper.scrape! }.to raise_error(AlreadyImportedError)
+    scraper.scrape!
+    expect(scraper.errors).to be_present
+    expect(scraper.errors.full_messages).to include("Post was already imported! #{ScrapePostJob.view_post(post.id)}")
     expect(Post.count).to eq(1)
   end
 

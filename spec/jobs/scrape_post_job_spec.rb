@@ -13,7 +13,12 @@ RSpec.describe ScrapePostJob do
     stub_fixture(url, 'scrape_no_replies')
     board = create(:board)
     create(:character, screenname: 'wild_pegasus_appeared')
-    ScrapePostJob.perform_now(url, board.id, nil, Post.statuses[:complete], false, board.creator_id)
+    params = {
+      dreamwidth_url: url,
+      board_id: board.id,
+      status: Post.statuses[:complete]
+    }
+    ScrapePostJob.perform_now(params, user: board.creator)
     expect(Message.count).to eq(1)
     expect(Message.first.subject).to eq("Post import succeeded")
     expect(Post.count).to eq(1)
@@ -34,8 +39,14 @@ RSpec.describe ScrapePostJob do
       url, board.id, nil, Post.statuses[:complete], false, board.creator_id
     ).and_call_original
 
+    params = {
+      dreamwidth_url: url,
+      board_id: board.id,
+      status: Post.statuses[:complete]
+    }
+
     begin
-      ScrapePostJob.perform_now(url, board.id, nil, Post.statuses[:complete], false, board.creator_id)
+      ScrapePostJob.perform_now(params, user: board.creator)
     rescue UnrecognizedUsernameError
       expect(Message.count).to eq(1)
       expect(Message.first.subject).to eq("Post import failed")
@@ -51,7 +62,7 @@ RSpec.describe ScrapePostJob do
     stub_fixture(url, 'scrape_no_replies')
     board = create(:board)
     create(:character, screenname: 'wild_pegasus_appeared', user: board.creator)
-    scraper = PostScraper.new(url, board.id)
+    scraper = PostScraper.new(url, board_id: board.id)
     scraper.scrape!
 
     expect(ScrapePostJob).to receive(:notify_exception).with(
@@ -59,8 +70,14 @@ RSpec.describe ScrapePostJob do
       url, board.id, nil, Post.statuses[:complete], false, board.creator_id
     ).and_call_original
 
+    params = {
+      dreamwidth_url: url,
+      board_id: board.id,
+      status: Post.statuses[:complete]
+    }
+
     begin
-      ScrapePostJob.perform_now(url, board.id, nil, Post.statuses[:complete], false, board.creator_id)
+      ScrapePostJob.perform_now(params, user: board.creator)
     rescue AlreadyImportedError
       expect(Message.count).to eq(1)
       expect(Message.first.subject).to eq("Post import failed")

@@ -237,7 +237,7 @@ RSpec.describe PostScraper do
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
 
-  scraper = PostScraper.new(url, board_id: board.id)
+    scraper = PostScraper.new(url, board_id: board.id)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'") # just to quiet it
 

@@ -129,7 +129,7 @@ class PostScraper < Generic::Service
 
     @post = Post.new(board_id: @board_id, section_id: @section_id, subject: subject, status: @status, is_import: true)
 
-    scraper = ReplyScraper.new(@post, errors: @errors)
+    scraper = ReplyScraper.new(@post, errors: @errors, console: @console_import)
     scraper.import(username: username, img_url: img_url, img_keyword: img_keyword, content: content, created_at: created_at)
   end
 
@@ -149,7 +149,7 @@ class PostScraper < Generic::Service
 
       reply = @post.replies.new(skip_notify: true, skip_post_update: true, skip_regenerate: true, is_import: true)
 
-      scraper = ReplyScraper.new(reply, errors: @errors)
+      scraper = ReplyScraper.new(reply, errors: @errors, console: @console_import)
       scraper.import(username: username, img_url: img_url, img_keyword: img_keyword, content: content, created_at: created_at)
     end
   end

@@ -20,9 +20,10 @@ class ReplyScraper < Object
     'timepoof'           => 'Timepoof',
   }
 
-  def initialize(reply, errors: ActiveModel::Errors.new(self))
+  def initialize(reply, errors: ActiveModel::Errors.new(self), console: false)
     @reply = reply
     @errors = errors
+    @console_import = console
   end
 
   def import(username:, img_url:, img_keyword:, content:, created_at:)

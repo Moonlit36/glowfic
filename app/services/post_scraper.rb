@@ -27,9 +27,7 @@ class PostScraper < Generic::Service
     @board_id = board_id || SANDBOX_ID
     @section_id = section_id
     @status = status || Post.statuses[:complete]
-    url += (url.include?('?') ? '&' : '?') + 'style=site' unless url.include?('style=site')
-    url += '&view=flat' unless url.include?('view=flat') || threaded
-    @url = url
+    @url = clean_url(url)
     @console_import = console
     @threaded_import = threaded # boolean
     @subject = subject
@@ -228,10 +226,11 @@ class PostScraper < Generic::Service
   def set_from_icon(tag, url, keyword)
     return unless url
 
-    url = 'https://v.dreamwidth.org' + url if url[0] == '/'
-    host_url = url.gsub(/https?:\/\//, "")
-    https_url = 'https://' + host_url
-    icon = Icon.find_by(url: https_url)
+    uri = URI(url)
+    host = uri.host || 'v.dreamwidth.org'
+    url = URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
+
+    icon = Icon.find_by(url: url)
     return icon if icon
 
     end_index = keyword.index("(Default)").to_i - 1
@@ -291,6 +290,15 @@ class PostScraper < Generic::Service
     return content unless content.ends_with?("</div>")
     index = content.index('edittime')
     content[0..index-13]
+  end
+
+  def clean_url(url)
+    uri = URI(url)
+    query = Rack::Utils.parse_query(uri.query)
+    query['style'] = 'site'
+    query['view'] = 'flat' unless @threaded_import
+    query = Rack::Utils.build_query(query)
+    URI::HTTPS.build(host: uri.host, path: uri.path, fragment: uri.fragment, query: query).to_s
   end
 
   def logger

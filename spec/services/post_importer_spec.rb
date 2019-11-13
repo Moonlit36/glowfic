@@ -11,7 +11,7 @@ RSpec.describe PostImporter do
         importer = PostImporter.new(nil)
         importer.import({}, user: nil)
         expect(importer.errors).to be_present
-        expect(importer.errors.full_messages.first).to eq('Invalid URL provided.')
+        expect(importer.errors.full_messages.first).to eq('Url is invalid')
         expect(ScrapePostJob).not_to have_been_enqueued
       end
 
@@ -19,7 +19,7 @@ RSpec.describe PostImporter do
         importer = PostImporter.new('')
         importer.import({}, user: nil)
         expect(importer.errors).to be_present
-        expect(importer.errors.full_messages.first).to eq('Invalid URL provided.')
+        expect(importer.errors.full_messages.first).to eq('Url is invalid')
         expect(ScrapePostJob).not_to have_been_enqueued
       end
 
@@ -27,7 +27,7 @@ RSpec.describe PostImporter do
         importer = PostImporter.new('http://www.google.com')
         importer.import({}, user: nil)
         expect(importer.errors).to be_present
-        expect(importer.errors.full_messages.first).to eq('Invalid URL provided.')
+        expect(importer.errors.full_messages.first).to eq('Url is invalid')
         expect(ScrapePostJob).not_to have_been_enqueued
       end
 
@@ -35,7 +35,7 @@ RSpec.describe PostImporter do
         importer = PostImporter.new('http://www.dreamwidth.com')
         importer.import({}, user: nil)
         expect(importer.errors).to be_present
-        expect(importer.errors.full_messages.first).to eq('Invalid URL provided.')
+        expect(importer.errors.full_messages.first).to eq('Url is invalid')
         expect(ScrapePostJob).not_to have_been_enqueued
       end
 
@@ -43,7 +43,7 @@ RSpec.describe PostImporter do
         importer = PostImporter.new('http://localhostdreamwidth:3000index')
         importer.import({}, user: nil)
         expect(importer.errors).to be_present
-        expect(importer.errors.full_messages.first).to eq('Invalid URL provided.')
+        expect(importer.errors.full_messages.first).to eq('Url is invalid')
         expect(ScrapePostJob).not_to have_been_enqueued
       end
     end

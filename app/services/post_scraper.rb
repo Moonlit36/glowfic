@@ -226,18 +226,11 @@ class PostScraper < Generic::Service
   def set_from_icon(tag, url, keyword)
     return unless url
 
-    uri = URI(url)
-    host = uri.host || 'v.dreamwidth.org'
-    url = URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
-
+    url = parse_url(url)
     icon = Icon.find_by(url: url)
     return icon if icon
 
-    end_index = keyword.index("(Default)").to_i - 1
-    start_index = (keyword.index(':') || -1) + 1
-    parsed_keyword = keyword[start_index..end_index].strip
-    parsed_keyword = 'Default' if parsed_keyword.blank? && keyword.include?("(Default)")
-    keyword = parsed_keyword
+    keyword = parse_keyword(keyword)
 
     if tag.character
       icon = tag.character.icons.find_by(keyword: keyword)
@@ -245,7 +238,21 @@ class PostScraper < Generic::Service
       return icon if icon
     end
 
-    create_icon(tag, https_url, keyword)
+    create_icon(tag, url, keyword)
+  end
+
+  def parse_url(url)
+    uri = URI(url)
+    host = uri.host || 'v.dreamwidth.org'
+    URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
+  end
+
+  def parse_keyword(keyword)
+    end_index = keyword.index("(Default)").to_i - 1
+    start_index = (keyword.index(':') || -1) + 1
+    parsed_keyword = keyword[start_index..end_index].strip
+    parsed_keyword = 'Default' if parsed_keyword.blank? && keyword.include?("(Default)")
+    parsed_keyword
   end
 
   def clean_keyword(tag, keyword)

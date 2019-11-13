@@ -25,7 +25,8 @@ class ReplyScraper < Generic::Service
   def set_from_username(tag, username)
     return User.find_by(username: BASE_ACCOUNTS[username]) if BASE_ACCOUNTS.key?(username)
 
-    unless (character = Character.find_by(screenname: [username.tr("-", "_"), username.tr("_", "-")]))
+    character = Character.find_by(screenname: [username.tr("-", "_"), username.tr("_", "-")])
+    unless character
       user = prompt_for_user(username)
       character = Character.create!(user: user, name: username, screenname: username)
       gallery = Gallery.create!(user: user, name: username)
@@ -49,9 +50,7 @@ class ReplyScraper < Generic::Service
   end
 
   def set_from_icon(tag, url, keyword)
-    uri = URI(url)
-    host = uri.host || 'v.dreamwidth.org'
-    url = URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
+    url = icon_url(url)
     icon = Icon.find_by(url: url)
     return icon if icon
 
@@ -64,6 +63,12 @@ class ReplyScraper < Generic::Service
     end
 
     create_icon(tag, url, keyword)
+  end
+
+  def icon_url(url)
+    uri = URI(url)
+    host = uri.host || 'v.dreamwidth.org'
+    URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
   end
 
   def parse_keyword(keyword)

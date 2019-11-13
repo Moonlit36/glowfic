@@ -1,4 +1,6 @@
 class PostImporter < Generic::Service
+  attr_reader :url
+
   def initialize(url)
     @url = url
     super()
@@ -19,11 +21,9 @@ class PostImporter < Generic::Service
   def self.valid_dreamwidth_url?(url)
     # this is simply checking for a properly formatted Dreamwidth URL
     # errors when actually querying the URL are handled by ScrapePostJob
-    return false if url.blank?
-    return false unless url.include?('dreamwidth')
+    return false if url.blank? || !url.include?('dreamwidth')
     parsed_url = URI.parse(url)
-    return false unless parsed_url.host
-    parsed_url.host.ends_with?('dreamwidth.org')
+    parsed_url.host&.ends_with?('dreamwidth.org')
   rescue URI::InvalidURIError
     false
   end
@@ -31,7 +31,7 @@ class PostImporter < Generic::Service
   private
 
   def validate_url!
-    @errors.add(:base, 'Invalid URL provided.') unless self.class.valid_dreamwidth_url?(@url)
+    @errors.add(:url, :invalid) unless self.class.valid_dreamwidth_url?(@url)
   end
 
   def validate_duplicate!(board_id)
@@ -50,6 +50,7 @@ class PostImporter < Generic::Service
           "or contact Marri if you wish to map a particular screenname to "\
           "'your base account posting without a character'."
     @errors.add(:base, msg)
+    @errors.add(:username, missing_usernames)
   end
 
   def calculate_missing_usernames

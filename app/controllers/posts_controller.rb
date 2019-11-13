@@ -393,8 +393,15 @@ class PostsController < WritableController
     importer = PostImporter.new(params[:dreamwidth_url])
     importer.import(import_params, user: current_user)
     if importer.errors.present?
-      flash.now[:error][:message] = "Post import failed."
-      flash.now[:error][:array] = importer.errors.full_mesages
+      if importer.errors.key?(:username)
+        flash.now[:error] = {
+          message: importer.errors[:base].first,
+          array: importer.errors[:username].flatten
+        }
+      else
+        # if we don't have a username array there'll only be one error message
+        flash.now[:error] = importer.errors.full_messages.first
+      end
       params[:view] = 'import'
       editor_setup
       render :new

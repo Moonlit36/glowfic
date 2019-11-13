@@ -1,10 +1,31 @@
 class ReplyScraper < Object
-  def initialize(reply, errors:)
+  BASE_ACCOUNTS = {
+    'alicornucopia'      => 'Alicorn',
+    'pythbox'            => 'Kappa',
+    'lintamande'         => 'lintamande',
+    'marrinikari'        => 'Marri',
+    'peterxy'            => 'Pedro',
+    'peterverse'         => 'Pedro',
+    'curiousdiscoverer'  => 'CuriousDiscoverer',
+    'aestrix'            => 'Aestrix',
+    'unbitwise'          => 'Unbitwise',
+    'erinflight'         => 'ErinFlight',
+    'andaisq'            => 'andaisq',
+    'rockeye-stonetoe'   => 'Rockeye',
+    'rockeye_stonetoe'   => 'Rockeye',
+    'maggie-of-the-owls' => 'MaggieoftheOwls',
+    'maggie_of_the_owls' => 'MaggieoftheOwls', # have both - and _ versions cause Dreamwidth supports both
+    'nemoconsequentiae'  => 'Nemo',
+    'armokgob'           => 'Armok',
+    'timepoof'           => 'Timepoof',
+  }
+
+  def initialize(reply, errors: ActiveModel::Errors.new(self))
     @reply = reply
-    @erorrs = errors
+    @errors = errors
   end
 
-  def import
+  def import(username:, img_url:, img_keyword:, content:, created_at:)
     @reply.created_at = @reply.updated_at = created_at
     @reply.content = strip_content(content)
     @reply.user = set_from_username(@reply, username)

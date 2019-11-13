@@ -258,12 +258,15 @@ class PostScraper < Generic::Service
       if lbracket && lbracket > 0 # without_desc must be non-empty
         without_desc = keyword[0...lbracket]
         icon = tag.character.icons.find_by(keyword: without_desc)
-        return icon if icon
       end
     end
+    icon ||= kappa_keyword(tag, keyword, without_desc) if tag.user_id == 3
+    icon
+  end
 
+  def kappa_keyword(tag, keyword, without_desc)
     # kappa icon handling - icons are prefixed
-    if tag.user_id == 3 && (spaceindex = keyword.index(" "))
+    if (spaceindex = keyword.index(" "))
       unprefixed = keyword[spaceindex..-1]
       icon = tag.character.icons.detect { |i| i.keyword.ends_with?(unprefixed) }
       icon ||= tag.character.icons.detect { |i| i.keyword.ends_with?(without_desc[spaceindex..-1]) } if without_desc

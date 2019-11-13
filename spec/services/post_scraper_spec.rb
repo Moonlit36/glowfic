@@ -5,7 +5,7 @@ RSpec.describe PostScraper do
   end
 
   it "should not change url if view is present" do
-    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?view=flat'
+    url = 'https://wild-pegasus-appeared.dreamwidth.org/403.html?view=flat'
     scraper = PostScraper.new(url)
     expect(scraper.url.sub('view=flat', '')).not_to include('view=flat')
     expect(scraper.url.gsub("&style=site", "").length).to eq(url.length)

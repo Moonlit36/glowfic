@@ -23,10 +23,10 @@ class PostScraper < Generic::Service
 
   attr_accessor :url, :post, :html_doc
 
-  def initialize(url, board_id: nil, section_id: nil, status: nil, threaded: false, console: false, subject: nil)
-    @board_id = board_id || SANDBOX_ID
+  def initialize(url, board_id: SANDBOX_ID, section_id: nil, status: Post.statuses[:complete], threaded: false, console: false, subject: nil)
+    @board_id = board_id
     @section_id = section_id
-    @status = status || Post.statuses[:complete]
+    @status = status
     @url = clean_url(url)
     @console_import = console
     @threaded_import = threaded # boolean

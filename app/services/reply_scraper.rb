@@ -20,6 +20,8 @@ class ReplyScraper < Object
     'timepoof'           => 'Timepoof',
   }
 
+  attr_reader :errors
+
   def initialize(reply, errors: ActiveModel::Errors.new(self), console: false)
     @reply = reply
     @errors = errors

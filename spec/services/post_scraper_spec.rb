@@ -185,8 +185,7 @@ RSpec.describe PostScraper do
 
     scraper = PostScraper.new(urls.first, board_id: board.id, threaded: true)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'repealing'")
-    scraper.scrape_threads!(threads)
-    expect(Post.count).to eq(1)
+    expect { scraper.scrape_threads!(threads) }.to change { Post.count }.by(1)
     expect(Post.first.subject).to eq('repealing')
     expect(Post.first.authors_locked).to eq(true)
     expect(Reply.count).to eq(55)
@@ -255,11 +254,10 @@ RSpec.describe PostScraper do
     icon = create(:icon, user: kappa, keyword: '⑮ mountains')
     gallery.icons << icon
     tag = build(:reply, user: kappa, character: char)
-    expect(tag.icon_id).to be_nil
     scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 mountains')
+    found_icon = scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 mountains')
     expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
+    expect(found_icon.id).to eq(icon.id)
   end
 
   it "handles icons with descriptions" do
@@ -270,11 +268,10 @@ RSpec.describe PostScraper do
     icon = create(:icon, user: user, keyword: 'keyword blah')
     gallery.icons << icon
     tag = build(:reply, user: user, character: char)
-    expect(tag.icon_id).to be_nil
     scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'keyword blah (Accessbility description.)')
+    found_icon = scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'keyword blah (Accessbility description.)')
     expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
+    expect(found_icon.id).to eq(icon.id)
   end
 
   it "handles kappa icons with descriptions" do
@@ -287,9 +284,9 @@ RSpec.describe PostScraper do
     tag = build(:reply, user: kappa, character: char)
     expect(tag.icon_id).to be_nil
     scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 keyword blah (Accessbility description.)')
+    found_icon = scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 keyword blah (Accessbility description.)')
     expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
+    expect(found_icon.id).to eq(icon.id)
   end
 
   it "can fail a download" do

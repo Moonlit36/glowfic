@@ -36,17 +36,18 @@ class PostScraper < Generic::Service
     super()
   end
 
-  def scrape!
+  def scrape!(threads=nil)
     @html_doc = doc_from_url(@url)
 
     Post.transaction do
       import_post_from_doc(@html_doc)
-      import_replies_from_doc(@html_doc)
-      links = page_links
-      links.each_with_index do |link, i|
-        logger.debug "Scraping '#{@post.subject}': page #{i+1}/#{links.count}"
-        doc = doc_from_url(link)
-        import_replies_from_doc(doc)
+      if threads.present?
+        threads.each do |thread|
+          @html_doc = doc_from_url(thread)
+          evaluate_links
+        end
+      else
+        evaluate_links
       end
       finalize_post_data
     end
@@ -61,31 +62,20 @@ class PostScraper < Generic::Service
   # in the given order
   def scrape_threads!(threads)
     @errors.add(:base, 'threaded_import must be true to use scrape_threads!') && return unless @threaded_import
-
-    @html_doc = doc_from_url(@url)
-    # if threads.blank?
-    #   threads = top_level_comments(@html_doc)
-    # end
-
-    Post.transaction do
-      import_post_from_doc(@html_doc)
-      threads.each do |thread|
-        @html_doc = doc_from_url(thread)
-        import_replies_from_doc(@html_doc)
-        links = page_links
-        links.each_with_index do |link, i|
-          logger.debug "Scraping '#{@post.subject}': page #{i+1}/#{links.count}"
-          doc = doc_from_url(link)
-          import_replies_from_doc(doc)
-        end
-      end
-      finalize_post_data
-    end
-    GenerateFlatPostJob.perform_later(@post.id)
-    @post
+    scrape!(threads)
   end
 
   private
+
+  def evaluate_links
+    import_replies_from_doc(@html_doc)
+    links = page_links
+    links.each_with_index do |link, i|
+      logger.debug "Scraping '#{@post.subject}': page #{i+1}/#{links.count}"
+      doc = doc_from_url(link)
+      import_replies_from_doc(doc)
+    end
+  end
 
   def doc_from_url(url)
     # download URL, trying up to 3 times

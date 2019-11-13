@@ -7,11 +7,11 @@ class PostImporter < Generic::Service
   end
 
   def import(params, user:)
-    validate_url!
+    validate_url
     return false if @errors.present?
-    validate_duplicate!(params[:board_id]) unless params[:threaded]
+    validate_duplicate(params[:board_id]) unless params[:threaded]
     return false if @errors.present?
-    validate_usernames!
+    validate_usernames
     return false if @errors.present?
 
     # note that the arg order for this import method does not match the order of ScrapePostJob
@@ -30,18 +30,18 @@ class PostImporter < Generic::Service
 
   private
 
-  def validate_url!
+  def validate_url
     @errors.add(:url, :invalid) unless self.class.valid_dreamwidth_url?(@url)
   end
 
-  def validate_duplicate!(board_id)
+  def validate_duplicate(board_id)
     subject = dreamwidth_doc.at_css('.entry .entry-title').text.strip
     subj_post = Post.find_by(subject: subject, board_id: board_id)
     return unless subj_post
     @errors.add(:post, "has already been imported! #{ScrapePostJob.view_post(subj_post.id)}")
   end
 
-  def validate_usernames!
+  def validate_usernames
     missing_usernames = calculate_missing_usernames
     return unless missing_usernames.present?
 

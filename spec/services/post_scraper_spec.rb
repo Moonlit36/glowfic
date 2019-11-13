@@ -34,7 +34,7 @@ RSpec.describe PostScraper do
     allow_any_instance_of(ReplyScraper).to receive(:set_from_icon).and_return(nil)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
 
-    scraper.scrape!
+    scraper.scrape
 
     expect(Post.count).to eq(1)
     expect(Reply.count).to eq(46)
@@ -58,7 +58,7 @@ RSpec.describe PostScraper do
     allow_any_instance_of(ReplyScraper).to receive(:set_from_icon).and_return(nil)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
 
-    scraper.scrape!
+    scraper.scrape
 
     expect(Post.count).to eq(1)
     expect(Reply.count).to eq(92)
@@ -105,7 +105,7 @@ RSpec.describe PostScraper do
     stub_fixture(url, 'scrape_no_replies')
     scraper = PostScraper.new(url)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    scraper.scrape!
+    scraper.scrape
     expect(scraper.errors).to be_present
     expect(scraper.errors.full_messages).to include("Unrecognized username: wild_pegasus_appeared")
   end
@@ -117,8 +117,8 @@ RSpec.describe PostScraper do
     stub_fixture(url, 'scrape_no_replies')
     scraper = PostScraper.new(url, board_id: board.id)
     allow(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    expect { scraper.scrape! }.to change { Post.count }.by(1)
-    expect { scraper.scrape! }.not_to change { Post.count }
+    expect { scraper.scrape }.to change { Post.count }.by(1)
+    expect { scraper.scrape }.not_to change { Post.count }
     expect(scraper.errors).to be_present
   end
 
@@ -130,7 +130,7 @@ RSpec.describe PostScraper do
     stub_fixture(url, 'scrape_no_replies')
     scraper = PostScraper.new(url, board_id: board.id, subject: new_title)
     allow(scraper.send(:logger)).to receive(:info).with("Importing thread '#{new_title}'")
-    scraper.scrape!
+    scraper.scrape
     expect(scraper.errors).to be_present
     expect(scraper.errors.full_messages).to include("Post was already imported! #{ScrapePostJob.view_post(post.id)}")
     expect(Post.count).to eq(1)
@@ -147,7 +147,7 @@ RSpec.describe PostScraper do
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
     expect_any_instance_of(ReplyScraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
 
-    scraper.scrape!
+    scraper.scrape
 
     expect(Post.count).to eq(1)
     expect(Reply.count).to eq(0)
@@ -185,7 +185,7 @@ RSpec.describe PostScraper do
 
     scraper = PostScraper.new(urls.first, board_id: board.id, threaded: true)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'repealing'")
-    expect { scraper.scrape_threads!(threads) }.to change { Post.count }.by(1)
+    expect { scraper.scrape_threads(threads) }.to change { Post.count }.by(1)
     expect(Post.first.subject).to eq('repealing')
     expect(Post.first.authors_locked).to eq(true)
     expect(Reply.count).to eq(55)
@@ -214,7 +214,7 @@ RSpec.describe PostScraper do
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'") # just to quiet it
 
-    scraper.scrape!
+    scraper.scrape
     expect(User.count).to eq(1)
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
@@ -240,7 +240,7 @@ RSpec.describe PostScraper do
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'") # just to quiet it
 
-    scraper.scrape!
+    scraper.scrape
     expect(User.count).to eq(1)
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)

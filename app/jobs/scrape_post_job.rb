@@ -5,7 +5,7 @@ class ScrapePostJob < ApplicationJob
     Resque.logger.debug "Starting scrape for #{params[:dreamwidth_url]}"
     scraper = PostScraper.new(params[:dreamwidth_url], board_id: params[:board_id], section_id: params[:section_id],
                               status: params[:status], threaded: params[:threaded])
-    scraped_post = scraper.scrape!
+    scraped_post = scraper.scrape
     if scraper.errors.present?
       self.class.handle_errors(scraper.errors, user: user, url: params[:dreamwidth_url])
     else

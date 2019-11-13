@@ -14,7 +14,7 @@ class PostScraper < Generic::Service
     super()
   end
 
-  def scrape!(threads=nil)
+  def scrape(threads=nil)
     @html_doc = doc_from_url(@url)
 
     Post.transaction do
@@ -33,15 +33,17 @@ class PostScraper < Generic::Service
     GenerateFlatPostJob.perform_later(@post.id)
     @post
   end
+  alias scrape! scrape
 
   # works as an alternative to scrape! when you want to scrape particular
   # top-level threads of a post sequentially
   # "threads" are URL permalinks to the threads to scrape, which it will scrape
   # in the given order
-  def scrape_threads!(threads)
-    @errors.add(:base, 'threaded_import must be true to use scrape_threads!') && return unless @threaded_import
-    scrape!(threads)
+  def scrape_threads(threads)
+    @errors.add(:base, 'threaded_import must be true to use scrape_threads') && return unless @threaded_import
+    scrape(threads)
   end
+  alias scrape_threads! scrape_threads
 
   private
 

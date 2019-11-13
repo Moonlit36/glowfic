@@ -53,7 +53,7 @@ RSpec.describe ScrapePostJob do
     board = create(:board)
     create(:character, screenname: 'wild_pegasus_appeared', user: board.creator)
     scraper = PostScraper.new(url, board_id: board.id)
-    scraper.scrape!
+    scraper.scrape
 
     params = {
       dreamwidth_url: url,

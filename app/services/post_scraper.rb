@@ -147,16 +147,23 @@ class PostScraper < Generic::Service
       username = comment.at_css('.comment-poster b').inner_html
       created_at = comment.at_css('.datetime').text
 
-      @reply = @post.replies.new(skip_notify: true, skip_post_update: true, skip_regenerate: true, is_import: true)
-      scraper = ReplyScraper.new(@reply, errors: @errors)
+      reply = @post.replies.new(skip_notify: true, skip_post_update: true, skip_regenerate: true, is_import: true)
+
+      scraper = ReplyScraper.new(reply, errors: @errors)
       scraper.import(username: username, img_url: img_url, img_keyword: img_keyword, content: content, created_at: created_at)
     end
   end
 
   def finalize_post_data
-    @post.last_user_id = @reply.try(:user_id) || @post.user_id
-    @post.last_reply_id = @reply.try(:id)
-    @post.tagged_at = @reply.try(:created_at) || @post.created_at
+    last_reply = post.replies.last
+    if last_reply
+      @post.last_user_id = @reply.try(:user_id)
+      @post.last_reply_id = @reply.try(:id)
+      @post.tagged_at = @reply.try(:created_at)
+    else
+      @post.last_user_id = @post.user_id
+      @post.tagged_at = @post.created_at
+    end
     @post.authors_locked = true
     @post.save!
   end

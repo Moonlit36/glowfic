@@ -302,6 +302,7 @@ class PostScraper < Generic::Service
   def clean_url(url)
     uri = URI(url)
     query = Rack::Utils.parse_query(uri.query)
+    return url if query['style'] == 'site' && (query['view'] = 'flat' || @threaded_import)
     query['style'] = 'site'
     query['view'] = 'flat' unless @threaded_import
     query = Rack::Utils.build_query(query)

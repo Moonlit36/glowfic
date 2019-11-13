@@ -260,13 +260,13 @@ class PostScraper < Generic::Service
         icon = tag.character.icons.find_by(keyword: without_desc)
       end
     end
-    icon ||= kappa_keyword(tag, keyword, without_desc) if tag.user_id == 3
+    icon ||= kappa_keyword(tag, keyword, without_desc)
     icon
   end
 
   def kappa_keyword(tag, keyword, without_desc)
     # kappa icon handling - icons are prefixed
-    if (spaceindex = keyword.index(" "))
+    if tag.user_id == 3 && (spaceindex = keyword.index(" "))
       unprefixed = keyword[spaceindex..-1]
       icon = tag.character.icons.detect { |i| i.keyword.ends_with?(unprefixed) }
       icon ||= tag.character.icons.detect { |i| i.keyword.ends_with?(without_desc[spaceindex..-1]) } if without_desc

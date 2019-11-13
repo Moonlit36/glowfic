@@ -100,14 +100,6 @@ RSpec.describe PostScraper do
     ])
   end
 
-  it "should raise an error when an unexpected character is found" do
-    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
-    stub_fixture(url, 'scrape_no_replies')
-    scraper = PostScraper.new(url)
-    expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    expect { scraper.scrape! }.to raise_error(UnrecognizedUsernameError)
-  end
-
   it "should raise an error when post is already imported" do
     board = create(:board)
     create(:character, screenname: 'wild_pegasus_appeared', user: board.creator)
@@ -130,27 +122,6 @@ RSpec.describe PostScraper do
     allow(scraper.send(:logger)).to receive(:info).with("Importing thread '#{new_title}'")
     expect { scraper.scrape! }.to raise_error(AlreadyImportedError)
     expect(Post.count).to eq(1)
-  end
-
-  it "should scrape character, user and icon properly" do
-    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
-    stub_fixture(url, 'scrape_no_replies')
-    user = create(:user, username: "Marri")
-    board = create(:board, creator: user)
-
-    scraper = PostScraper.new(url, board.id, nil, nil, false, true)
-    allow(STDIN).to receive(:gets).and_return(user.username)
-    expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    expect_any_instance_of(ReplyScraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-
-    scraper.scrape!
-
-    expect(Post.count).to eq(1)
-    expect(Reply.count).to eq(0)
-    expect(User.count).to eq(1)
-    expect(Icon.count).to eq(1)
-    expect(Character.count).to eq(1)
-    expect(Character.where(screenname: 'wild_pegasus_appeared').first).not_to be_nil
   end
 
   it "should only scrape specified threads if given" do
@@ -189,58 +160,6 @@ RSpec.describe PostScraper do
     expect(User.count).to eq(2)
     expect(Icon.count).to eq(30)
     expect(Character.count).to eq(8)
-  end
-
-  it "doesn't recreate characters and icons if they exist" do
-    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
-    stub_fixture(url, 'scrape_no_replies')
-
-    user = create(:user, username: "Marri")
-    board = create(:board, creator: user)
-    nita = create(:character, user: user, screenname: 'wild_pegasus_appeared', name: 'Juanita')
-    icon = create(:icon, keyword: 'sad', url: 'http://v.dreamwidth.org/8517100/2343677', user: user)
-    gallery = create(:gallery, user: user)
-    gallery.icons << icon
-    nita.galleries << gallery
-
-    expect(User.count).to eq(1)
-    expect(Icon.count).to eq(1)
-    expect(Character.count).to eq(1)
-
-    scraper = PostScraper.new(url, board.id)
-    expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'") # just to quiet it
-
-    scraper.scrape!
-    expect(User.count).to eq(1)
-    expect(Icon.count).to eq(1)
-    expect(Character.count).to eq(1)
-  end
-
-  it "doesn't recreate icons if they already exist for that character with new urls" do
-    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
-    stub_fixture(url, 'scrape_no_replies')
-
-    user = create(:user, username: "Marri")
-    board = create(:board, creator: user)
-    nita = create(:character, user: user, screenname: 'wild_pegasus_appeared', name: 'Juanita')
-    icon = create(:icon, keyword: 'sad', url: 'http://glowfic.com/uploaded/icon.png', user: user)
-    gallery = create(:gallery, user: user)
-    gallery.icons << icon
-    nita.galleries << gallery
-
-    expect(User.count).to eq(1)
-    expect(Icon.count).to eq(1)
-    expect(Character.count).to eq(1)
-
-    scraper = PostScraper.new(url, board.id)
-    expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'") # just to quiet it
-
-    scraper.scrape!
-    expect(User.count).to eq(1)
-    expect(Icon.count).to eq(1)
-    expect(Character.count).to eq(1)
   end
 
   it "can fail a download" do

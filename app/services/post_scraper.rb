@@ -157,14 +157,9 @@ class PostScraper < Generic::Service
     created_at = doc.at_css('.entry .datetime').text
     content = doc.at_css('.entry-content').inner_html
 
-    @post = Post.new
-    @post.board_id = @board_id
-    @post.section_id = @section_id
-    @post.subject = subject
-    @post.content = strip_content(content)
+    @post = Post.new(board_id: @board_id, section_id: @section_id, subject: subject,
+                     content: strip_content(content), status: @status, is_import: true)
     @post.created_at = @post.updated_at = @post.edited_at = created_at
-    @post.status = @status
-    @post.is_import = true
 
     # detect already imported
     # skip if it's a threaded import, unless a subject was given manually
@@ -173,10 +168,9 @@ class PostScraper < Generic::Service
       raise ActiveRecord::Rollback
     end
 
-    set_from_username(@post, username)
+    @post.user = set_from_username(@post, username)
     @post.last_user_id = @post.user_id
-
-    set_from_icon(@post, img_url, img_keyword)
+    @post.icon = set_from_icon(@post, img_url, img_keyword)
 
     Audited.audit_class.as_user(@post.user) do
       @post.save!
@@ -197,18 +191,10 @@ class PostScraper < Generic::Service
       username = comment.at_css('.comment-poster b').inner_html
       created_at = comment.at_css('.datetime').text
 
-      @reply = Reply.new
-      @reply.post = @post
-      @reply.content = strip_content(content)
-      @reply.created_at = @reply.updated_at = created_at
-
-      set_from_username(@reply, username)
-      set_from_icon(@reply, img_url, img_keyword)
-
-      @reply.skip_notify = true
-      @reply.skip_post_update = true
-      @reply.skip_regenerate = true
-      @reply.is_import = true
+      @reply = @post.replies.new(content: strip_content(content), created_at: created_at, updated_at: created_at,
+                                 skip_notify: true, skip_post_update: true, skip_regenerate: true, is_import: true)
+      @reply.user = set_from_username(@reply, username)
+      @reply.icon = set_from_icon(@reply, img_url, img_keyword)
       Audited.audit_class.as_user(@reply.user) do
         @reply.save!
       end
@@ -224,13 +210,9 @@ class PostScraper < Generic::Service
   end
 
   def set_from_username(tag, username)
-    if BASE_ACCOUNTS.key?(username)
-      tag.user = User.find_by(username: BASE_ACCOUNTS[username])
-      return
-    end
+    return User.find_by(username: BASE_ACCOUNTS[username]) if BASE_ACCOUNTS.key?(username)
 
-    character = Character.find_by(screenname: username.tr("-", "_")) || Character.find_by(screenname: username.tr("_", "-"))
-    unless character
+    unless (character = Character.find_by(screenname: [username.tr("-", "_"), username.tr("_", "-")]))
       user = prompt_for_user(username)
       character = Character.create!(user: user, name: username, screenname: username)
       gallery = Gallery.create!(user: user, name: username)
@@ -238,15 +220,15 @@ class PostScraper < Generic::Service
     end
 
     tag.character = character
-    tag.user = character.user
+    character.user
   end
 
   def prompt_for_user(username)
     if @console_import
-      print('User ID or username for ' + username + '? ')
+      print("User ID or username for #{username}? ")
       input = STDIN.gets.chomp
-      return User.find_by_id(input) if input.to_s == input.to_i.to_s
-      User.where('lower(username) = ?', input.downcase).first
+      return User.find_by(id: input) if input.to_s == input.to_i.to_s
+      User.find_by('lower(username) = ?', input.downcase)
     else
       @errors.add(:base, "Unrecognized username: #{username}")
       raise ActiveRecord::Rollback
@@ -260,7 +242,7 @@ class PostScraper < Generic::Service
     host_url = url.gsub(/https?:\/\//, "")
     https_url = 'https://' + host_url
     icon = Icon.find_by(url: https_url)
-    tag.icon = icon and return if icon
+    return icon if icon
 
     end_index = keyword.index("(Default)").to_i - 1
     start_index = (keyword.index(':') || -1) + 1
@@ -269,11 +251,9 @@ class PostScraper < Generic::Service
     keyword = parsed_keyword
 
     if tag.character
-      icon = tag.character.icons.where(keyword: keyword).first
-      tag.icon = icon and return if icon
-
-      icon = clean_keyword(tag, keyword)
-      tag.icon = icon and return if icon
+      icon = tag.character.icons.find_by(keyword: keyword)
+      icon ||= clean_keyword(tag, keyword)
+      return icon if icon
     end
 
     create_icon(tag, https_url, keyword)
@@ -287,29 +267,23 @@ class PostScraper < Generic::Service
       lbracket = keyword.rindex(' (')
       if lbracket && lbracket > 0 # without_desc must be non-empty
         without_desc = keyword[0...lbracket]
-        icon = tag.character.icons.where(keyword: without_desc).first
+        icon = tag.character.icons.find_by(keyword: without_desc)
         return icon if icon
       end
     end
 
     # kappa icon handling - icons are prefixed
     if tag.user_id == 3 && (spaceindex = keyword.index(" "))
-      unprefixed = keyword.slice(spaceindex, keyword.length)
+      unprefixed = keyword[spaceindex..-1]
       icon = tag.character.icons.detect { |i| i.keyword.ends_with?(unprefixed) }
-      return icon if icon
-
-      if without_desc
-        unprefixed = without_desc.slice(spaceindex, without_desc.length)
-        icon = tag.character.icons.detect { |i| i.keyword.ends_with?(unprefixed) }
-        return icon if icon
-      end
+      icon ||= tag.character.icons.detect { |i| i.keyword.ends_with?(without_desc[spaceindex..-1]) } if without_desc
     end
+    icon
   end
 
   def create_icon(tag, https_url, keyword)
     icon = Icon.create!(user: tag.user, url: https_url, keyword: keyword)
-    tag.icon = icon
-    return unless tag.character
+    return icon unless tag.character
 
     gallery = tag.character.galleries.first
     if gallery.nil?
@@ -317,6 +291,7 @@ class PostScraper < Generic::Service
       CharactersGallery.create!(character_id: tag.character.id, gallery_id: gallery.id)
     end
     gallery.icons << icon
+    icon
   end
 
   def strip_content(content)

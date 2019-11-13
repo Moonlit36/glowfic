@@ -1,12 +1,16 @@
-class PostImporter < Object
+class PostImporter < Generic::Service
   def initialize(url)
     @url = url
+    super()
   end
 
   def import(params, user:)
     validate_url!
+    return false if @errors.present?
     validate_duplicate!(params[:board_id]) unless params[:threaded]
+    return false if @errors.present?
     validate_usernames!
+    return false if @errors.present?
 
     # note that the arg order for this import method does not match the order of ScrapePostJob
     ScrapePostJob.perform_later(params, user: user)
@@ -27,14 +31,14 @@ class PostImporter < Object
   private
 
   def validate_url!
-    raise InvalidDreamwidthURL.new('Invalid URL provided.') unless self.class.valid_dreamwidth_url?(@url)
+    @errors.add(:base, 'Invalid URL provided.') unless self.class.valid_dreamwidth_url?(@url)
   end
 
   def validate_duplicate!(board_id)
     subject = dreamwidth_doc.at_css('.entry .entry-title').text.strip
-    subj_post = Post.where(subject: subject, board_id: board_id).first
+    subj_post = Post.find_by(subject: subject, board_id: board_id)
     return unless subj_post
-    raise AlreadyImported.new("This thread has already been imported! " + ScrapePostJob.view_post(subj_post.id))
+    @errors.add(:post, "has already been imported! #{ScrapePostJob.view_post(subj_post.id)}")
   end
 
   def validate_usernames!
@@ -45,12 +49,12 @@ class PostImporter < Object
           "Please have the correct author create a character with the correct screenname, "\
           "or contact Marri if you wish to map a particular screenname to "\
           "'your base account posting without a character'."
-    raise MissingUsernames.new(msg, missing_usernames)
+    @errors.add(:base, msg)
   end
 
   def calculate_missing_usernames
     usernames = dreamwidth_doc.css('.poster span.ljuser b').map(&:text).uniq
-    usernames -= PostScraper::BASE_ACCOUNTS.keys
+    usernames -= ReplyScraper::BASE_ACCOUNTS.keys
     poster_names = dreamwidth_doc.css('.entry-poster span.ljuser b')
     usernames -= [poster_names.last.text] if poster_names.count > 1
     usernames -= Character.where(screenname: usernames).pluck(:screenname)
@@ -65,8 +69,3 @@ class PostImporter < Object
     @dreamwidth_doc = Nokogiri::HTML(data)
   end
 end
-
-class PostImportError < ApiError; end
-class MissingUsernames < PostImportError; end
-class AlreadyImported < PostImportError; end
-class InvalidDreamwidthURL < PostImportError; end

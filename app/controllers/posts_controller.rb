@@ -390,11 +390,11 @@ class PostsController < WritableController
   end
 
   def import_thread
-    begin
-      importer = PostImporter.new(params[:dreamwidth_url])
-      importer.import(import_params, user: current_user)
-    rescue PostImportError => e
-      flash.now[:error] = e.api_error
+    importer = PostImporter.new(params[:dreamwidth_url])
+    importer.import(import_params, user: current_user)
+    if importer.errors.present?
+      flash.now[:error][:message] = "Post import failed."
+      flash.now[:error][:array] = importer.errors.full_mesages
       params[:view] = 'import'
       editor_setup
       render :new

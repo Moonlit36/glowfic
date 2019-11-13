@@ -157,9 +157,9 @@ class PostScraper < Generic::Service
   def finalize_post_data
     last_reply = post.replies.last
     if last_reply
-      @post.last_user_id = @reply.try(:user_id)
-      @post.last_reply_id = @reply.try(:id)
-      @post.tagged_at = @reply.try(:created_at)
+      @post.last_user_id = last_reply.user_id
+      @post.last_reply_id = last_reply.id
+      @post.tagged_at = last_reply.created_at
     else
       @post.last_user_id = @post.user_id
       @post.tagged_at = @post.created_at

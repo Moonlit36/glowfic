@@ -116,12 +116,7 @@ class PostScraper < Generic::Service
     while index < comments.count
       first_reply_in_batch = comments[index]
       url = first_reply_in_batch.at_css('.comment-title').at_css('a').attribute('href').value
-      unless url[/(\?|&)style=site/]
-        url_obj = URI.parse(url)
-        url_obj.query += ('&' if url_obj.query.present?) + 'style=site'
-        url = url_obj.to_s
-      end
-      links << url
+      links << clean_url(url)
       depth = first_reply_in_batch[:class][/comment-depth-\d+/].sub('comment-depth-', '').to_i
 
       # check for accidental comment at same depth, if so go mark it as a new page too
@@ -158,7 +153,7 @@ class PostScraper < Generic::Service
 
     @post.user = set_from_username(@post, username)
     @post.last_user_id = @post.user_id
-    @post.icon = set_from_icon(@post, img_url, img_keyword)
+    @post.icon = set_from_icon(@post, img_url, img_keyword) if img_url
 
     Audited.audit_class.as_user(@post.user) do
       @post.save!
@@ -182,7 +177,7 @@ class PostScraper < Generic::Service
       @reply = @post.replies.new(content: strip_content(content), created_at: created_at, updated_at: created_at,
                                  skip_notify: true, skip_post_update: true, skip_regenerate: true, is_import: true)
       @reply.user = set_from_username(@reply, username)
-      @reply.icon = set_from_icon(@reply, img_url, img_keyword)
+      @reply.icon = set_from_icon(@reply, img_url, img_keyword) if img_url
       Audited.audit_class.as_user(@reply.user) do
         @reply.save!
       end
@@ -224,9 +219,9 @@ class PostScraper < Generic::Service
   end
 
   def set_from_icon(tag, url, keyword)
-    return unless url
-
-    url = parse_url(url)
+    uri = URI(url)
+    host = uri.host || 'v.dreamwidth.org'
+    url = URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
     icon = Icon.find_by(url: url)
     return icon if icon
 
@@ -239,12 +234,6 @@ class PostScraper < Generic::Service
     end
 
     create_icon(tag, url, keyword)
-  end
-
-  def parse_url(url)
-    uri = URI(url)
-    host = uri.host || 'v.dreamwidth.org'
-    URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
   end
 
   def parse_keyword(keyword)

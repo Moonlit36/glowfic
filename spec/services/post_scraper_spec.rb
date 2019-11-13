@@ -30,8 +30,8 @@ RSpec.describe PostScraper do
     board = create(:board, creator: user)
 
     scraper = PostScraper.new(url, board.id)
-    allow(scraper).to receive(:prompt_for_user) { user }
-    allow(scraper).to receive(:set_from_icon).and_return(nil)
+    allow_any_instance_of(ReplyScraper).to receive(:prompt_for_user).and_return(user)
+    allow_any_instance_of(ReplyScraper).to receive(:set_from_icon).and_return(nil)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
 
     scraper.scrape!
@@ -54,8 +54,8 @@ RSpec.describe PostScraper do
     board = create(:board, creator: user)
 
     scraper = PostScraper.new(url, board.id)
-    allow(scraper).to receive(:prompt_for_user) { user }
-    allow(scraper).to receive(:set_from_icon).and_return(nil)
+    allow_any_instance_of(ReplyScraper).to receive(:prompt_for_user).and_return(user)
+    allow_any_instance_of(ReplyScraper).to receive(:set_from_icon).and_return(nil)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
 
     scraper.scrape!
@@ -141,7 +141,7 @@ RSpec.describe PostScraper do
     scraper = PostScraper.new(url, board.id, nil, nil, false, true)
     allow(STDIN).to receive(:gets).and_return(user.username)
     expect(scraper.send(:logger)).to receive(:info).with("Importing thread 'linear b'")
-    expect(scraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
+    expect_any_instance_of(ReplyScraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
 
     scraper.scrape!
 
@@ -241,51 +241,6 @@ RSpec.describe PostScraper do
     expect(User.count).to eq(1)
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
-  end
-
-  it "handles Kappa icons" do
-    kappa = create(:user, id: 3)
-    char = create(:character, user: kappa)
-    gallery = create(:gallery, user: kappa)
-    char.galleries << gallery
-    icon = create(:icon, user: kappa, keyword: '⑮ mountains')
-    gallery.icons << icon
-    tag = build(:reply, user: kappa, character: char)
-    expect(tag.icon_id).to be_nil
-    scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 mountains')
-    expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
-  end
-
-  it "handles icons with descriptions" do
-    user = create(:user)
-    char = create(:character, user: user)
-    gallery = create(:gallery, user: user)
-    char.galleries << gallery
-    icon = create(:icon, user: user, keyword: 'keyword blah')
-    gallery.icons << icon
-    tag = build(:reply, user: user, character: char)
-    expect(tag.icon_id).to be_nil
-    scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'keyword blah (Accessbility description.)')
-    expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
-  end
-
-  it "handles kappa icons with descriptions" do
-    kappa = create(:user, id: 3)
-    char = create(:character, user: kappa)
-    gallery = create(:gallery, user: kappa)
-    char.galleries << gallery
-    icon = create(:icon, user: kappa, keyword: '⑮ keyword blah')
-    gallery.icons << icon
-    tag = build(:reply, user: kappa, character: char)
-    expect(tag.icon_id).to be_nil
-    scraper = PostScraper.new('')
-    scraper.send(:set_from_icon, tag, 'http://irrelevanturl.com', 'f.1 keyword blah (Accessbility description.)')
-    expect(Icon.count).to eq(1)
-    expect(tag.icon_id).to eq(icon.id)
   end
 
   it "can fail a download" do

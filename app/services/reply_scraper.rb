@@ -1,7 +1,7 @@
-class ReplyScraper < Generic::Service
-  def initialize(reply)
+class ReplyScraper < Object
+  def initialize(reply, errors:)
     @reply = reply
-    super()
+    @erorrs = errors
   end
 
   def import

@@ -67,11 +67,12 @@ class PostScraper < Generic::Service
       data = HTTParty.get(url).body
     rescue Net::OpenTimeout => e
       retried += 1
+      base_message = "Failed to get #{url}: #{e.message}"
       if retried < max_try
-        logger.debug "Failed to get #{url}: #{e.message}; retrying (tried #{retried} #{'time'.pluralize(retried)})"
+        logger.debug base_message + "; retrying (tried #{retried} #{'time'.pluralize(retried)})"
         retry
       else
-        logger.warn "Failed to get #{url}: #{e.message}"
+        logger.warn base_message
         raise
       end
     end
@@ -117,8 +118,9 @@ class PostScraper < Generic::Service
     logger.info "Importing thread '#{subject}'"
 
     username = doc.at_css('.entry-poster b').inner_html
-    img_url = doc.at_css('.entry .userpic img').try(:attribute, 'src').try(:value)
-    img_keyword = doc.at_css('.entry .userpic img').try(:attribute, 'title').try(:value)
+    img_node = doc.at_css('.entry .userpic img')
+    img_url = img_node.try(:attribute, 'src').try(:value)
+    img_keyword = img_node.try(:attribute, 'title').try(:value)
     created_at = doc.at_css('.entry .datetime').text
     content = doc.at_css('.entry-content').inner_html
 
@@ -136,16 +138,14 @@ class PostScraper < Generic::Service
   end
 
   def import_replies_from_doc(doc)
-    comments = if @threaded_import
-      doc.at_css('#comments').css('.comment-thread').first(25).compact
-    else
-      doc.at_css('#comments').css('.comment-thread') # can't do 25 on non-threaded because single page is 50 per
-    end
+    comments = doc.at_css('#comments').css('.comment-thread')
+    comments = comments.first(25).compact if @threaded_import # can't do 25 on non-threaded because single page is 50 per
 
     comments.each do |comment|
       content = comment.at_css('.comment-content').inner_html
-      img_url = comment.at_css('.userpic img').try(:attribute, 'src').try(:value)
-      img_keyword = comment.at_css('.userpic img').try(:attribute, 'title').try(:value)
+      img_node = comment.at_css('.userpic img')
+      img_url = img_node.try(:attribute, 'src').try(:value)
+      img_keyword = img_node.try(:attribute, 'title').try(:value)
       username = comment.at_css('.comment-poster b').inner_html
       created_at = comment.at_css('.datetime').text
 

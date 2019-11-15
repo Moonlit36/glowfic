@@ -7,10 +7,10 @@ class PostScraper < Generic::Service
     @board_id = board_id
     @section_id = section_id
     @status = status
-    @url = clean_url(url)
     @console_import = console
     @threaded_import = threaded # boolean
     @subject = subject
+    @url = clean_url(url)
     super()
   end
 
@@ -166,11 +166,20 @@ class PostScraper < Generic::Service
   def clean_url(url)
     uri = URI(url)
     query = Rack::Utils.parse_query(uri.query)
-    return url if query['style'] == 'site' && (query['view'] = 'flat' || @threaded_import)
-    query['style'] = 'site'
+    return url if check_query(query)
+    query.except!('style')
     query['view'] = 'flat' unless @threaded_import
     new_query = Rack::Utils.build_query(query)
     URI::HTTPS.build(host: uri.host, path: uri.path, fragment: uri.fragment, query: new_query).to_s
+  end
+
+  def check_query(query)
+    # query parameters are good if both:
+    # - style is absent or site
+    # - view is flat or this a threaded import
+    return false unless query['view'] == 'flat' || @threaded_import
+    return true unless query.key?('style')
+    query['style'] == 'site'
   end
 
   def find_comment_depth(comment)

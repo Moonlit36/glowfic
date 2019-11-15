@@ -5,16 +5,16 @@ RSpec.describe PostScraper do
   end
 
   it "should not change url if view is present" do
-    url = 'https://wild-pegasus-appeared.dreamwidth.org/403.html?view=flat'
-    scraper = PostScraper.new(url)
-    expect(scraper.url.sub('view=flat', '')).not_to include('view=flat')
-    expect(scraper.url.gsub("&style=site", "").length).to eq(url.length)
-  end
-
-  it "should add site style to the url" do
     url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?view=flat'
     scraper = PostScraper.new(url)
-    expect(scraper.url).to include('&style=site')
+    expect(scraper.url.sub('view=flat', '')).not_to include('view=flat')
+    expect(scraper.url.length).to eq(url.length)
+  end
+
+  it "should remove non-site styles from the url" do
+    url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=mine&view=flat'
+    scraper = PostScraper.new(url)
+    expect(scraper.url).not_to include('&style=mine')
   end
 
   it "should not change url if site style is present" do
@@ -70,7 +70,7 @@ RSpec.describe PostScraper do
   end
 
   it "should detect all threaded pages" do
-    url = 'http://alicornutopia.dreamwidth.org/9596.html?thread=4077436&style=site#cmt4077436'
+    url = 'http://alicornutopia.dreamwidth.org/9596.html?thread=4077436#cmt4077436'
     stub_fixture(url, 'scrape_threaded')
     scraper = PostScraper.new(url, threaded: true)
     html_doc = scraper.send(:doc_from_url, url)
@@ -83,8 +83,8 @@ RSpec.describe PostScraper do
     scraper = PostScraper.new(url, threaded: true)
     html_doc = scraper.send(:doc_from_url, url)
     expect(scraper.send(:page_links, html_doc)).to eq([
-      'https://alicornutopia.dreamwidth.org/22671.html?thread=14705039&style=site#cmt14705039',
-      'https://alicornutopia.dreamwidth.org/22671.html?thread=14711695&style=site#cmt14711695'
+      'https://alicornutopia.dreamwidth.org/22671.html?thread=14705039#cmt14705039',
+      'https://alicornutopia.dreamwidth.org/22671.html?thread=14711695#cmt14711695'
     ])
   end
 
@@ -94,9 +94,9 @@ RSpec.describe PostScraper do
     scraper = PostScraper.new(url, threaded: true)
     html_doc = scraper.send(:doc_from_url, url)
     expect(scraper.send(:page_links, html_doc)).to eq([
-      'https://alicornutopia.dreamwidth.org/22671.html?thread=14698383&style=site#cmt14698383',
-      'https://alicornutopia.dreamwidth.org/22671.html?thread=14698639&style=site#cmt14698639',
-      'https://alicornutopia.dreamwidth.org/22671.html?thread=14705551&style=site#cmt14705551'
+      'https://alicornutopia.dreamwidth.org/22671.html?thread=14698383#cmt14698383',
+      'https://alicornutopia.dreamwidth.org/22671.html?thread=14698639#cmt14698639',
+      'https://alicornutopia.dreamwidth.org/22671.html?thread=14705551#cmt14705551'
     ])
   end
 
@@ -128,10 +128,10 @@ RSpec.describe PostScraper do
 
   it "should only scrape specified threads if given" do
     stubs = {
-      'https://mind-game.dreamwidth.org/1073.html?style=site'                       => 'scrape_specific_threads',
-      'https://mind-game.dreamwidth.org/1073.html?thread=6961&style=site#cmt6961'   => 'scrape_specific_threads_thread1',
-      'https://mind-game.dreamwidth.org/1073.html?thread=16689&style=site#cmt16689' => 'scrape_specific_threads_thread2_1',
-      'https://mind-game.dreamwidth.org/1073.html?thread=48177&style=site#cmt48177' => 'scrape_specific_threads_thread2_2'
+      'https://mind-game.dreamwidth.org/1073.html?style=site'            => 'scrape_specific_threads',
+      'https://mind-game.dreamwidth.org/1073.html?thread=6961#cmt6961'   => 'scrape_specific_threads_thread1',
+      'https://mind-game.dreamwidth.org/1073.html?thread=16689#cmt16689' => 'scrape_specific_threads_thread2_1',
+      'https://mind-game.dreamwidth.org/1073.html?thread=48177#cmt48177' => 'scrape_specific_threads_thread2_2'
     }
     stubs.each { |url, file| stub_fixture(url, file) }
     urls = stubs.keys

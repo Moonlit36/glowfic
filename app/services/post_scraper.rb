@@ -1,7 +1,7 @@
 class PostScraper < Generic::Service
   SANDBOX_ID = 3
 
-  attr_accessor :url, :post, :html_doc, :errors
+  attr_accessor :url, :post, :html_doc
 
   def initialize(url, board_id: SANDBOX_ID, section_id: nil, status: Post.statuses[:complete], threaded: false, console: false, subject: nil)
     @board_id = board_id
@@ -46,6 +46,8 @@ class PostScraper < Generic::Service
   alias scrape_threads! scrape_threads
 
   private
+
+  attr_writer :errors
 
   def evaluate_links
     import_replies_from_doc(@html_doc)

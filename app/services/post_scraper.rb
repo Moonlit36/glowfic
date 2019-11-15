@@ -83,7 +83,7 @@ class PostScraper < Generic::Service
     return threaded_page_links(doc) if @threaded_import
     links = doc.at_css('.page-links')
     return [] if links.nil?
-    links.css('a').map { |link| link.attribute('href').value }
+    links.css('a').map { |link| link[:href] }
   end
 
   def threaded_page_links(doc)

@@ -156,15 +156,10 @@ class PostScraper < Generic::Service
   end
 
   def finalize_post_data
-    last_reply = post.replies.last
-    if last_reply
-      @post.last_user_id = last_reply.user_id
-      @post.last_reply_id = last_reply.id
-      @post.tagged_at = last_reply.created_at
-    else
-      @post.last_user_id = @post.user_id
-      @post.tagged_at = @post.created_at
-    end
+    last_reply = @post.replies.last
+    @post.last_user_id = (last_reply || @post).user_id
+    @post.last_reply_id = last_reply.id if last_reply
+    @post.tagged_at = (last_reply || @post).created_at
     @post.authors_locked = true
     @post.save!
   end

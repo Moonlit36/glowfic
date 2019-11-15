@@ -401,7 +401,7 @@ class PostsController < WritableController
       else
         # if we don't have a username array there'll only be one error message
         flash.now[:error] = {
-          messsage: "An error occurred when importing this thread.",
+          message: "An error occurred when importing this thread.",
           array: importer.errors.full_messages
         }
       end

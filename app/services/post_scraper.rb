@@ -120,8 +120,8 @@ class PostScraper < Generic::Service
 
     username = doc.at_css('.entry-poster b').inner_html
     img_node = doc.at_css('.entry .userpic img')
-    img_url = img_node.try(:attribute, 'src').try(:value)
-    img_keyword = img_node.try(:attribute, 'title').try(:value)
+    img_url = img_node.try(:[], 'src')
+    img_keyword = img_node.try(:[], 'title')
     created_at = doc.at_css('.entry .datetime').text
     content = doc.at_css('.entry-content').inner_html
 
@@ -145,8 +145,8 @@ class PostScraper < Generic::Service
     comments.each do |comment|
       content = comment.at_css('.comment-content').inner_html
       img_node = comment.at_css('.userpic img')
-      img_url = img_node.try(:attribute, 'src').try(:value)
-      img_keyword = img_node.try(:attribute, 'title').try(:value)
+      img_url = img_node.try(:[], 'src')
+      img_keyword = img_node.try(:[], 'title')
       username = comment.at_css('.comment-poster b').inner_html
       created_at = comment.at_css('.datetime').text
 

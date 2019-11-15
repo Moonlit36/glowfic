@@ -1,7 +1,7 @@
 class PostScraper < Generic::Service
   SANDBOX_ID = 3
 
-  attr_accessor :url, :post
+  attr_reader :url
 
   def initialize(url, board_id: SANDBOX_ID, section_id: nil, status: Post.statuses[:complete], threaded: false, console: false, subject: nil)
     @board_id = board_id

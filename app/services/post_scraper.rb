@@ -97,13 +97,13 @@ class PostScraper < Generic::Service
     index = 25
     while index < comments.count
       first_reply_in_batch = comments[index]
-      url = first_reply_in_batch.at_css('.comment-title').at_css('a').attribute('href').value
+      url = first_reply_in_batch.at_css('.comment-title a').attribute('href').value
       links << clean_url(url)
-      depth = first_reply_in_batch[:class][/comment-depth-\d+/].sub('comment-depth-', '').to_i
+      depth = first_reply_in_batch[:class][/comment-depth-\d+/].split('-')[-1].to_i
 
       # check for accidental comment at same depth, if so go mark it as a new page too
       next_comment = comments[index+1]
-      if next_comment && next_comment[:class][/comment-depth-\d+/].sub('comment-depth-', '').to_i == depth
+      if next_comment && next_comment[:class][/comment-depth-\d+/].split('-')[-1].to_i == depth
         index += 1
       else
         index += 25

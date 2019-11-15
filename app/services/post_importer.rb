@@ -14,7 +14,6 @@ class PostImporter < Generic::Service
     validate_usernames
     return false if @errors.present?
 
-    # note that the arg order for this import method does not match the order of ScrapePostJob
     ScrapePostJob.perform_later(params, user: user)
   end
 

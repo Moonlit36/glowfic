@@ -50,7 +50,7 @@ class PostScraper < Generic::Service
     import_replies_from_doc(base_doc)
     links = page_links(base_doc)
     links.each_with_index do |link, i|
-      logger.debug "Scraping '#{@post.subject}': page #{i+1}/#{links.count}"
+      Resque.logger.debug "Scraping '#{@post.subject}': page #{i+1}/#{links.count}"
       doc = doc_from_url(link)
       import_replies_from_doc(doc)
     end
@@ -68,10 +68,10 @@ class PostScraper < Generic::Service
       retried += 1
       base_message = "Failed to get #{url}: #{e.message}"
       if retried < max_try
-        logger.debug base_message + "; retrying (tried #{retried} #{'time'.pluralize(retried)})"
+        Resque.logger.debug base_message + "; retrying (tried #{retried} #{'time'.pluralize(retried)})"
         retry
       else
-        logger.warn base_message
+        Resque.logger.warn base_message
         raise
       end
     end
@@ -114,7 +114,7 @@ class PostScraper < Generic::Service
 
   def import_post_from_doc(doc)
     subject = @subject || doc.at_css('.entry .entry-title').text.strip
-    logger.info "Importing thread '#{subject}'"
+    Resque.logger.info "Importing thread '#{subject}'"
 
     username = doc.at_css('.entry-poster b').inner_html
     img_node = doc.at_css('.entry .userpic img')
@@ -170,11 +170,7 @@ class PostScraper < Generic::Service
     return url if query['style'] == 'site' && (query['view'] = 'flat' || @threaded_import)
     query['style'] = 'site'
     query['view'] = 'flat' unless @threaded_import
-    query = Rack::Utils.build_query(query)
-    URI::HTTPS.build(host: uri.host, path: uri.path, fragment: uri.fragment, query: query).to_s
-  end
-
-  def logger
-    Resque.logger
+    new_query = Rack::Utils.build_query(query)
+    URI::HTTPS.build(host: uri.host, path: uri.path, fragment: uri.fragment, query: new_query).to_s
   end
 end

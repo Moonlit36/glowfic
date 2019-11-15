@@ -91,8 +91,8 @@ class ReplyScraper < Object
 
   def icon_url(url)
     uri = URI(url)
-    host = uri.host || 'v.dreamwidth.org'
-    URI::HTTPS.build(host: host, path: uri.path, fragment: uri.fragment, query: uri.query).to_s
+    uri.host ||= 'v.dreamwidth.org'
+    uri.to_s
   end
 
   def parse_keyword(keyword)

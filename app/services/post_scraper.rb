@@ -37,7 +37,10 @@ class PostScraper < Generic::Service
   # "threads" are URL permalinks to the threads to scrape, which it will scrape
   # in the given order
   def scrape_threads(threads)
-    @errors.add(:base, 'threaded_import must be true to use scrape_threads') && return unless @threaded_import
+    unless @threaded_import
+      @errors.add(:base, 'threaded_import must be true to use scrape_threads')
+      return
+    end
     scrape(threads)
   end
   alias scrape_threads! scrape_threads

@@ -278,7 +278,8 @@ RSpec.describe PostsController do
         login_as(user)
         post :create, params: { button_import: true, dreamwidth_url: 'http://www.google.com' }
         expect(response).to render_template(:new)
-        expect(flash[:error]).to eq("Url is invalid")
+        expect(flash[:error][:message]).to eq("An error occurred when importing this thread.")
+        expect(flash[:error][:array]).to eq(["Url is invalid"])
       end
 
       it "requires extant usernames" do

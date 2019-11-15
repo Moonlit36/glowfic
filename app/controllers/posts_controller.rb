@@ -400,7 +400,10 @@ class PostsController < WritableController
         }
       else
         # if we don't have a username array there'll only be one error message
-        flash.now[:error] = importer.errors.full_messages.first
+        flash.now[:error] = {
+          messsage: "An error occurred when importing this thread.",
+          array: importer.errors.full_messages
+        }
       end
       params[:view] = 'import'
       editor_setup

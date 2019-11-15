@@ -167,18 +167,17 @@ class PostScraper < Generic::Service
     uri = URI(url)
     query = Rack::Utils.parse_query(uri.query)
     return url if check_query(query)
-    query.except!('style')
+    query['style'] = 'site'
     query['view'] = 'flat' unless @threaded_import
-    new_query = Rack::Utils.build_query(query)
-    URI::HTTPS.build(host: uri.host, path: uri.path, fragment: uri.fragment, query: new_query).to_s
+    uri.query = Rack::Utils.build_query(query)
+    uri.to_s
   end
 
   def check_query(query)
     # query parameters are good if both:
-    # - style is absent or site
+    # - style is site
     # - view is flat or this a threaded import
     return false unless query['view'] == 'flat' || @threaded_import
-    return true unless query.key?('style')
     query['style'] == 'site'
   end
 

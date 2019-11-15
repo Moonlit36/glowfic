@@ -97,13 +97,12 @@ class PostScraper < Generic::Service
     index = 25
     while index < comments.count
       first_reply_in_batch = comments[index]
-      url = first_reply_in_batch.at_css('.comment-title a').attribute('href').value
+      url = first_reply_in_batch.at_css('.comment-title a')[:href]
       links << clean_url(url)
-      depth = find_comment_depth(first_reply_in_batch)
 
       # check for accidental comment at same depth, if so go mark it as a new page too
       next_comment = comments[index+1]
-      if next_comment && find_comment_depth(next_comment) == depth
+      if next_comment && find_comment_depth(next_comment) == find_comment_depth(first_reply_in_batch)
         index += 1
       else
         index += 25

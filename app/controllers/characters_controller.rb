@@ -66,23 +66,22 @@ class CharactersController < ApplicationController
   def update
     updater = Character::Saver.new(@character, user: current_user, params: params)
 
-    begin
-      updater.update!
-    rescue NoModNoteError, ActiveRecord::RecordInvalid => e
+    if updater.update && updater.errors.blank?
+      flash[:success] = "Character saved successfully."
+      redirect_to character_path(@character)
+    else
       @page_title = "Edit Character: " + @character.name
-      if e.class == NoModNoteError
-        flash.now[:error] = e.message
+      if updater.errors.count == 1
+        flash.now[:error] = updater.errors.full_messages.first
       else
         flash.now[:error] = {
-          message: "Your character could not be saved.",
-          array: @character.errors.full_messages
+          message: "Your character could not be saved because of the following errors:",
+          array: updater.errors.full_messages
         }
       end
       build_editor
       render :edit
     else
-      flash[:success] = "Character saved successfully."
-      redirect_to character_path(@character)
     end
   end
 

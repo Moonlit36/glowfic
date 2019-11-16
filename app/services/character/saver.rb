@@ -10,23 +10,22 @@ class Character::Saver < Auditable::Saver
 
   private
 
-  def check_audit_comment
-    # TODO once assign_attributes doesn't save, use @character.audit_comment and uncomment clearing
-    raise NoModNoteError if @user.id != @character.user_id && @params.fetch(:character, {})[:audit_comment].blank?
-    # @character.audit_comment = nil if @character.changes.empty?
-  end
-
-  def build
+  def perform
     build_template
+    save
   end
 
-  def save!
+  def save
     Character.transaction do
       @character.assign_attributes(permitted_params)
+      check_audit_comment
+      raise ActiveRecord::Rollback if @errors
       @character.settings = process_tags(Setting, :character, :setting_ids)
       @character.gallery_groups = process_tags(GalleryGroup, :character, :gallery_group_ids)
       @character.save!
     end
+  rescue ActiveRecord::RecordInvalid
+    @errors.merge!(@character.errors)
   end
 
   def build_template

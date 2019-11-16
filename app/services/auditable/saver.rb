@@ -6,7 +6,6 @@ class Auditable::Saver < Generic::Saver
   end
 
   def check_audit_comment
-    raise NoModNoteError if @user != @model.user && @model.audit_comment.blank?
-    @model.audit_comment = nil if @model.changes.empty? # don't save an audit for a note and no changes
+    @errors.add(:base, "You must provide a reason for your moderator edit.") if @user != @model.user && @model.audit_comment.blank?
   end
 end

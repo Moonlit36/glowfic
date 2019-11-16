@@ -12,8 +12,8 @@ class Generic::Saver < Generic::Service
     save
   end
 
-  alias_method :create!, :perform
-  alias_method :update!, :perform
+  alias create perform
+  alias update perform
 
   private
 

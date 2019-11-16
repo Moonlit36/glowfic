@@ -31,19 +31,8 @@ class PostScraper < Generic::Service
     @post
   end
   alias scrape! scrape
-
-  # works as an alternative to scrape! when you want to scrape particular
-  # top-level threads of a post sequentially
-  # "threads" are URL permalinks to the threads to scrape, which it will scrape
-  # in the given order
-  def scrape_threads(threads)
-    unless @threaded_import
-      @errors.add(:base, 'threaded_import must be true to use scrape_threads')
-      return
-    end
-    scrape(threads)
-  end
-  alias scrape_threads! scrape_threads
+  alias scrape_threads scrape
+  alias scrape_threads! scrape
 
   private
 

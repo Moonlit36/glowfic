@@ -160,11 +160,11 @@ RSpec.describe Character::Saver do
   end
 
   describe "update" do
-    it_behaves_like "character", 'update!'
-
     let(:user) { create(:user) }
     let(:character) { create(:character, user: user) }
     let(:params) { ActionController::Parameters.new({ id: character.id }) }
+
+    it_behaves_like "character", 'update!'
 
     it "removes gallery only if not shared between groups" do
       group1 = create(:gallery_group) # gallery1

@@ -2327,6 +2327,7 @@ RSpec.describe PostsController do
         expect(flash[:success]).to eq("Your post has been updated.")
 
         post.reload
+        post.written.reload
         expect(post.written.content).to eq(newcontent)
         expect(post.subject).to eq(newsubj)
         expect(post.description).to eq('desc')

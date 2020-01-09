@@ -1478,7 +1478,8 @@ RSpec.describe PostsController do
       login_as(admin)
       put :update, params: {
         id: post.id,
-        post: { description: 'b', audit_comment: 'note' }
+        post: { description: 'b' },
+        reply: { audit_comment: 'note' }
       }
       expect(flash[:success]).to eq("Your post has been updated.")
       expect(post.reload.description).to eq('b')

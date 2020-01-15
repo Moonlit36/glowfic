@@ -16,7 +16,18 @@ if ENV.key?('MINIO_ENDPOINT')
     client.head_bucket(bucket: bucket_name)
   rescue StandardError => e
     puts "creating bucket #{bucket_name}..."
-    client.create_bucket(acl: 'public-read', bucket: bucket_name)
+    public_read_policy = {
+      Version: "2012-10-17",
+      Statement: [{
+        Effect: "Allow",
+        Principal: "*",
+        Action: "s3:GetObject",
+        Resource: "arn:aws:s3:::#{bucket_name}/*"
+      }]
+    }.to_json
+
+    client.create_bucket(bucket: bucket_name)
+    client.put_bucket_policy(bucket: bucket_name, policy: public_read_policy)
   end
 else
   Aws.config.update(config)

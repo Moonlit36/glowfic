@@ -2439,11 +2439,28 @@ RSpec.describe PostsController do
           id: post.id,
           post: {
             private_note: 'look a note!',
+            subject: 'new'
+          }
+        }
+        expect(Post.find_by_id(post.id).author_for(post.user).private_note).not_to be_nil
+        expect(post.reload.subject).to eq('new')
+      end
+
+      it "updates with written changes" do
+        post = create(:post, content: 'old')
+        login_as(post.user)
+        expect(post.author_for(post.user).private_note).to be_nil
+        put :update, params: {
+          id: post.id,
+          post: {
+            private_note: 'look a note!',
+          },
+          reply: {
             content: 'new'
           }
         }
         expect(Post.find_by_id(post.id).author_for(post.user).private_note).not_to be_nil
-        expect(post.reload.content).to eq('new')
+        expect(post.written.reload.content).to eq('new')
       end
 
       it "updates with coauthor" do

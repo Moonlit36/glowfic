@@ -911,7 +911,7 @@ RSpec.describe RepliesController do
       delete :destroy, params: { id: reply.id }
       expect(response).to redirect_to(reply_url(reply, anchor: "reply-#{reply.id}"))
       expect(flash[:error]).to eq({message: "Reply could not be deleted.", array: []})
-      expect(post.reload.replies).to eq([reply])
+      expect(post.reload.replies).to eq([post.written, reply])
     end
   end
 
@@ -971,7 +971,7 @@ RSpec.describe RepliesController do
       post_attributes.each do |key, val|
         expect(new_attributes[key]).to eq(val)
       end
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(5).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(5).to_a)
     end
 
     it "handles first reply deletion" do
@@ -991,7 +991,7 @@ RSpec.describe RepliesController do
       post_attributes.each do |key, val|
         expect(new_attributes[key]).to eq(val)
       end
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(3).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(3).to_a)
     end
 
     it "handles last reply deletion" do
@@ -1013,13 +1013,13 @@ RSpec.describe RepliesController do
       end
       expect(reloaded_post.last_user).to eq(deleted_reply.user)
       expect(reloaded_post.last_reply).to eq(deleted_reply)
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(3).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(3).to_a)
     end
 
     it "handles only reply deletion" do
       rpost = create(:post)
       expect(rpost.last_user).to eq(rpost.user)
-      expect(rpost.last_reply).to be_nil
+      expect(rpost.last_reply).to eq(rpost.written)
 
       deleted_reply = Timecop.freeze(rpost.reload.tagged_at + 1.day) { create(:reply, post: rpost) }
       rpost = Post.find(rpost.id)
@@ -1029,11 +1029,12 @@ RSpec.describe RepliesController do
       deleted_reply.destroy!
       rpost = Post.find(rpost.id)
       expect(rpost.last_user).to eq(rpost.user)
-      expect(rpost.last_reply).to be_nil
+      expect(rpost.last_reply).to eq(rpost.written)
 
       login_as(deleted_reply.user)
       post :restore, params: { id: deleted_reply.id }
       rpost = Post.find(rpost.id)
+      expect(deleted_reply.reload.reply_order).to eq(1)
       expect(rpost.last_user).to eq(deleted_reply.user)
       expect(rpost.last_reply).to eq(deleted_reply)
     end

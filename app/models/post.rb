@@ -218,8 +218,9 @@ class Post < ApplicationRecord
   end
 
   def total_word_count
-    return word_count unless replies.exists?
-    contents = replies.where.not(reply_order: 0).pluck(:content)
+    relevant_replies = replies.where.not(reply_order: 0)
+    return word_count unless relevant_replies.exists?
+    contents = relevant_replies.pluck(:content)
     contents[0] = contents[0].split.size
     word_count + contents.inject{|r, e| r + e.split.size}.to_i
   end

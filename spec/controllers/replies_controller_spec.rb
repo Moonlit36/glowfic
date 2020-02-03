@@ -911,7 +911,7 @@ RSpec.describe RepliesController do
       delete :destroy, params: { id: reply.id }
       expect(response).to redirect_to(reply_url(reply, anchor: "reply-#{reply.id}"))
       expect(flash[:error]).to eq({message: "Reply could not be deleted.", array: []})
-      expect(post.reload.replies).to eq([post.written, reply])
+      expect(post.reload.replies).to eq([reply])
     end
   end
 
@@ -971,7 +971,7 @@ RSpec.describe RepliesController do
       post_attributes.each do |key, val|
         expect(new_attributes[key]).to eq(val)
       end
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(5).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(5).to_a)
     end
 
     it "handles first reply deletion" do
@@ -991,7 +991,7 @@ RSpec.describe RepliesController do
       post_attributes.each do |key, val|
         expect(new_attributes[key]).to eq(val)
       end
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(3).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(3).to_a)
     end
 
     it "handles last reply deletion" do
@@ -1013,7 +1013,7 @@ RSpec.describe RepliesController do
       end
       expect(reloaded_post.last_user).to eq(deleted_reply.user)
       expect(reloaded_post.last_reply).to eq(deleted_reply)
-      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(0.upto(3).to_a)
+      expect(reloaded_post.replies.pluck(:reply_order).sort).to eq(1.upto(3).to_a)
     end
 
     it "handles only reply deletion" do
@@ -1179,7 +1179,7 @@ RSpec.describe RepliesController do
       it "finds all when no arguments given" do
         create_list(:reply, 4)
         get :search, params: { commit: true }
-        expect(assigns(:search_results)).to match_array(Reply.where(reply_order: 0))
+        expect(assigns(:search_results)).to match_array(Reply.where.not(reply_order: 0))
       end
 
       it "filters by author" do

@@ -13,7 +13,7 @@ class Post < ApplicationRecord
   belongs_to :last_user, class_name: 'User', inverse_of: false, optional: false
   belongs_to :last_reply, class_name: 'Reply', inverse_of: false, optional: true
   has_one :flat_post, dependent: :destroy
-  has_many :replies, inverse_of: :post, dependent: :delete_all
+  has_many :replies, -> { where('reply_order > 0') }, inverse_of: :post, dependent: :delete_all
   has_many :reply_drafts, dependent: :destroy
 
   has_many :post_viewers, inverse_of: :post, dependent: :destroy
@@ -141,19 +141,17 @@ class Post < ApplicationRecord
     return @first_unread if @first_unread
     viewed_at = last_read(user) || board.last_read(user)
     return @first_unread = self unless viewed_at
-    relevant_replies = replies.where.not(reply_order: 0)
-    return unless relevant_replies.exists?
-    reply = relevant_replies.where('created_at > ?', viewed_at).ordered.first
+    return unless replies.exists?
+    reply = replies.where('created_at > ?', viewed_at).ordered.first
     @first_unread ||= reply
   end
 
   def last_seen_reply_for(user)
     return @last_seen if @last_seen
-    relevant_replies = replies.where.not(reply_order: 0)
-    return unless relevant_replies.exists? # unlike first_unread_for we don't care about the post
+    return unless replies.exists? # unlike first_unread_for we don't care about the post
     viewed_at = last_read(user) || board.last_read(user)
     return unless viewed_at
-    reply = relevant_replies.where('created_at <= ?', viewed_at).ordered.last
+    reply = replies.where('created_at <= ?', viewed_at).ordered.last
     @last_seen = reply
   end
 
@@ -220,9 +218,8 @@ class Post < ApplicationRecord
   end
 
   def total_word_count
-    relevant_replies = replies.where.not(reply_order: 0)
-    return word_count unless relevant_replies.exists?
-    contents = relevant_replies.pluck(:content)
+    return word_count unless replies.exists?
+    contents = replies.pluck(:content)
     contents[0] = contents[0].split.size
     word_count + contents.inject{|r, e| r + e.split.size}.to_i
   end
@@ -231,7 +228,7 @@ class Post < ApplicationRecord
     sum = 0
     sum = word_count if user_id == user.id
 
-    user_replies = replies.where(user_id: user.id).where.not(reply_order: 0)
+    user_replies = replies.where(user_id: user.id)
     return sum unless user_replies.exists?
 
     contents = user_replies.pluck(:content)
@@ -245,7 +242,7 @@ class Post < ApplicationRecord
   end
 
   def character_appearance_counts
-    reply_counts = replies.where.not(reply_order: 0).joins(:character).group(:character_id).count
+    reply_counts = replies.joins(:character).group(:character_id).count
     reply_counts[character_id] = reply_counts[character_id].to_i + 1
     Character.where(id: reply_counts.keys).map { |c| [c, reply_counts[c.id]]}.sort_by{|a| -a[1] }
   end
@@ -257,7 +254,7 @@ class Post < ApplicationRecord
 
   def reply_count
     return read_attribute(:reply_count) if has_attribute?(:reply_count)
-    replies.where.not(reply_order: 0).count
+    replies.count
   end
 
   def last_user_deleted?
@@ -343,7 +340,8 @@ class Post < ApplicationRecord
   end
 
   def create_written
-    replies.create!(
+    self.written = Reply.create!(
+      post: self,
       reply_order: 0,
       user: user,
       content: content,

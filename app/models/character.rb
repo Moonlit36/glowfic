@@ -152,6 +152,7 @@ class Character < ApplicationRecord
   end
 
   def clear_char_ids
+    UpdateModelJob.perform_later(Post.to_s, {character_id: id}, {character_id: nil})
     UpdateModelJob.perform_later(Reply.to_s, {character_id: id}, {character_id: nil})
   end
 

@@ -250,6 +250,8 @@ class CharactersController < ApplicationController
     wheres[:character_alias_id] = orig_alias.try(:id) if @character.aliases.exists? && params[:orig_alias] != 'all'
 
     UpdateModelJob.perform_later(Reply.to_s, wheres, updates)
+    wheres[:id] = wheres.delete(:post_id) if params[:post_ids].present?
+    UpdateModelJob.perform_later(Post.to_s, wheres, updates)
 
     flash[:success] = "All uses of this character#{success_msg} will be replaced."
     redirect_to character_path(@character)

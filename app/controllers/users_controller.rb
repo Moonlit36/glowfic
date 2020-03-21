@@ -76,7 +76,7 @@ class UsersController < ApplicationController
     begin
       current_user.update!(user_params)
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(current_user, action: :updated, now: true, class_name: 'Account settings')
+      render_err.now(current_user, :update_failed, model_name: 'Account settings')
       log_error(e) unless current_user.errors.present?
 
       use_javascript('users/edit')

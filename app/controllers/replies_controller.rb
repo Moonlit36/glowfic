@@ -146,7 +146,7 @@ class RepliesController < WritableController
     begin
       reply.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(reply, action: 'created', now: true)
+      render_err.now(reply, :create_failed)
       log_error(e) unless reply.errors.present?
 
       redirect_to posts_path and return unless reply.post
@@ -183,7 +183,7 @@ class RepliesController < WritableController
     begin
       @reply.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@reply, action: 'updated', now: true)
+      render_err.now(@reply, :update_failed)
       log_error(e) unless @reply.errors.present?
 
       @audits = { @reply.id => @post.audits.count }
@@ -208,7 +208,7 @@ class RepliesController < WritableController
     begin
       @reply.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@reply, action: 'deleted')
+      render_err(@reply, :delete_failed)
       log_error(e) unless @reply.errors.present?
       redirect_to reply_path(@reply, anchor: "reply-#{@reply.id}")
     else

@@ -137,7 +137,7 @@ class PostsController < WritableController
     begin
       @post.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@post, action: 'created', now: true)
+      render_err.now(@post, :create_failed)
       log_error(e) unless @post.errors.present?
 
       editor_setup
@@ -212,7 +212,7 @@ class PostsController < WritableController
         @post.author_for(current_user).update!(private_note: @post.private_note) if is_author
       end
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@post, action: 'updated', now: true)
+      render_err.now(@post, :update_failed)
       log_error(e) unless @post.errors.present?
 
       @audits = { post: @post.audits.count }
@@ -233,7 +233,7 @@ class PostsController < WritableController
     begin
       @post.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@post, action: 'deleted')
+      render_err(@post, :delete_failed)
       log_error(e) unless @post.errors.present?
       redirect_to post_path(@post)
     else
@@ -356,7 +356,7 @@ class PostsController < WritableController
         @post.mark_read(current_user, at_time: @post.tagged_at)
       end
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@post, action: 'updated', class_name: 'Status')
+      render_err(@post, :update_failed, model_name: 'Status')
       log_error(e) unless @post.errors.present?
     else
       flash[:success] = "Post has been marked #{@post.status}."
@@ -369,7 +369,7 @@ class PostsController < WritableController
     begin
       @post.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@post, action: 'updated')
+      render_err(@post, :update_failed)
       log_error(e) unless @post.errors.present?
     else
       flash[:success] = "Post has been #{@post.authors_locked? ? 'locked to' : 'unlocked from'} current authors."

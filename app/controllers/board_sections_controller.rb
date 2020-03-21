@@ -19,7 +19,7 @@ class BoardSectionsController < ApplicationController
     begin
       @board_section.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@board_section, action: 'created', now: true, class_name: 'Section')
+      render_err.now(@board_section, :create_failed)
       log_error(e) unless @board_section.errors.present?
 
       @page_title = 'New Section'
@@ -50,7 +50,7 @@ class BoardSectionsController < ApplicationController
     begin
       @board_section.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@board_section, action: 'updated', now: true, class_name: 'Section')
+      render_err.now(@board_section, :update_failed)
       log_error(e) unless @board_section.errors.present?
 
       @page_title = 'Edit ' + @board_section.name_was
@@ -67,7 +67,7 @@ class BoardSectionsController < ApplicationController
     begin
       @board_section.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@board_section, action: 'deleted', class_name: 'Section')
+      render_err(@board_section, :delete_failed)
       log_error(e) unless @board_section.errors.present?
       redirect_to board_section_path(@board_section)
     else

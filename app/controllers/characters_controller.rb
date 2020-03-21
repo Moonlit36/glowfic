@@ -46,7 +46,7 @@ class CharactersController < ApplicationController
     begin
       @character.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@character, action: 'created', now: true)
+      render_err.now(@character, :create_failed)
       log_error(e) unless @character.errors.present?
 
       @page_title = "New Character"
@@ -86,7 +86,7 @@ class CharactersController < ApplicationController
         @character.save!
       end
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@character, action: 'updated', now: true)
+      render_err.now(@character, :update_failed)
       log_error(e) unless @character.errors.present?
 
       @page_title = "Edit Character: " + @character.name
@@ -132,7 +132,7 @@ class CharactersController < ApplicationController
     begin
       @character.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@character, action: 'deleted')
+      render_err(@character, :delete_failed)
       log_error(e) unless @character.errors.present?
       redirect_to character_path(@character)
     else

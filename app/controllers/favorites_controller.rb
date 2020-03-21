@@ -78,7 +78,7 @@ class FavoritesController < ApplicationController
     begin
       fav.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(fav, action: 'deleted')
+      render_err(fav, :delete_failed)
       log_error(e) unless fav.errors.present?
       redirect_to favorites_path
     else

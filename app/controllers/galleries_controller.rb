@@ -41,7 +41,7 @@ class GalleriesController < UploadingController
     begin
       @gallery.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@gallery, action: 'created', now: true)
+      render_err.now(@gallery, :create_failed)
       log_error(e) unless @gallery.errors.present?
 
       @page_title = 'New Gallery'
@@ -117,7 +117,7 @@ class GalleriesController < UploadingController
         @gallery.save!
       end
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@gallery, action: 'updated', now: true)
+      render_err.now(@gallery, :update_failed)
       log_error(e) unless @gallery.errors.present?
 
       @page_title = 'Edit Gallery: ' + @gallery.name_was
@@ -196,7 +196,7 @@ class GalleriesController < UploadingController
     begin
       @gallery.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@gallery, action: 'deleted')
+      render_err(@gallery, :delete_failed)
       log_error(e) unless @gallery.errors.present?
       redirect_to gallery_path(@gallery)
     else

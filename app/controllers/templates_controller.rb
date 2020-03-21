@@ -18,7 +18,7 @@ class TemplatesController < ApplicationController
     begin
       @template.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@template, action: 'created', now: true)
+      render_err.now(@template, :create_failed)
       log_error(e) unless @template.errors.present?
 
       editor_setup
@@ -48,7 +48,7 @@ class TemplatesController < ApplicationController
     begin
       @template.update!(permitted_params)
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@template, action: 'updated', now: true)
+      render_err.now(@template, :update_failed)
       log_error(e) unless @template.errors.present?
 
       editor_setup
@@ -64,7 +64,7 @@ class TemplatesController < ApplicationController
     begin
       @template.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@template, action: 'deleted')
+      render_err(@template, :delete_failed)
       log_error(e) unless @template.errors.present?
       redirect_to template_path(@template)
     else

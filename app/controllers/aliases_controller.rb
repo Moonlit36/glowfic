@@ -31,7 +31,7 @@ class AliasesController < ApplicationController
     begin
       @alias.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@alias, action: 'deleted', class_name: 'Alias')
+      render_err(@alias, :delete_failed)
       log_error(e) unless @alias.errors.present?
     else
       flash[:success] = "Alias removed."

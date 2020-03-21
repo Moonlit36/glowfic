@@ -69,7 +69,7 @@ class IconsController < UploadingController
     begin
       @icon.update!(permitted_params)
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@icon, action: 'updated', now: true)
+      render_err.now(@icon, :update_failed)
       log_error(e) unless @icon.errors.present?
 
       @page_title = 'Edit icon: ' + @icon.keyword_was
@@ -126,7 +126,7 @@ class IconsController < UploadingController
     begin
       @icon.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@icon, action: 'deleted')
+      render_err(@icon, :delete_failed)
       log_error(e) unless @icon.errors.present?
       redirect_to icon_path(@icon)
     else

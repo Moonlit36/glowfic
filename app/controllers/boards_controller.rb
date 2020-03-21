@@ -40,7 +40,7 @@ class BoardsController < ApplicationController
     begin
       @board.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@board, action: 'created', now: true, class_name: 'Continuity')
+      render_err.now(@board, :create_failed)
       log_error(e) unless @board.errors.present?
 
       @page_title = 'New Continuity'
@@ -77,7 +77,7 @@ class BoardsController < ApplicationController
     begin
       @board.update!(permitted_params)
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(@board, action: 'updated', now: true, class_name: 'Continuity')
+      render_err.now(@board, :update_failed)
       log_error(e) unless @board.errors.present?
 
       @page_title = 'Edit Continuity: ' + @board.name_was
@@ -95,7 +95,7 @@ class BoardsController < ApplicationController
     begin
       @board.destroy!
     rescue ActiveRecord::RecordNotDestroyed => e
-      render_errors(@board, action: 'deleted', class_name: 'Continuity')
+      render_err(@board, :delete_failed)
       log_error(e) unless @board.errors.present?
       redirect_to continuity_path(@board)
     else

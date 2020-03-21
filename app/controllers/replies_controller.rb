@@ -301,7 +301,7 @@ class RepliesController < WritableController
     begin
       draft.save!
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(draft, action: 'saved', class_name: 'Draft')
+      render_err(draft, :create_failed)
       log_errors(e) unless draft.errors.present?
     else
       flash[:success] = "Draft saved." if show_message

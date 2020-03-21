@@ -114,7 +114,7 @@ class CharactersController < ApplicationController
         dupe.save!
       end
     rescue ActiveRecord::RecordInvalid => e
-      render_errors(dupe, action: 'duplicated')
+      render_err(dupe, :duplicate_failed)
       log_error(e) unless dupe.errors.present?
       redirect_to character_path(@character)
     else

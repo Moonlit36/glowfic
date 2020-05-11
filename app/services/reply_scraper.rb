@@ -25,8 +25,8 @@ class ReplyScraper < Object
     @console_import = console
   end
 
-  def import(comment, post: false)
-    if post
+  def import(comment)
+    if @reply.is_a?(Post)
       username = comment.at_css('.entry-poster b').inner_html
       img_url = comment.at_css('.entry .userpic img').try(:attribute, 'src').try(:value)
       img_keyword = comment.at_css('.entry .userpic img').try(:attribute, 'title').try(:value)
@@ -46,7 +46,7 @@ class ReplyScraper < Object
     set_from_username(@reply, username)
     set_from_icon(@reply, img_url, img_keyword)
 
-    if post
+    if @reply.is_a?(Post)
       @reply.last_user_id = @reply.user_id
       @reply.edited_at = created_at
     end

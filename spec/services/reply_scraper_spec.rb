@@ -15,14 +15,14 @@ RSpec.describe ReplyScraper do
   it "should raise an error when an unexpected character is found" do
     scraper = ReplyScraper.new(post, errors: errors)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    expect { scraper.import(doc, post: true) }.to raise_error(UnrecognizedUsernameError)
+    expect { scraper.import(doc) }.to raise_error(UnrecognizedUsernameError)
   end
 
   it "should scrape character, user and icon properly" do
     scraper = ReplyScraper.new(post, console: true, errors: errors)
     allow(STDIN).to receive(:gets).and_return(user.username)
     expect(scraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    scraper.import(doc, post: true)
+    scraper.import(doc)
 
     expect(Post.count).to eq(1)
     expect(Reply.count).to eq(0)
@@ -45,7 +45,7 @@ RSpec.describe ReplyScraper do
 
     scraper = ReplyScraper.new(post, errors: errors)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    scraper.import(doc, post: true)
+    scraper.import(doc)
 
     expect(User.count).to eq(1)
     expect(Icon.count).to eq(1)
@@ -65,7 +65,7 @@ RSpec.describe ReplyScraper do
 
     scraper = ReplyScraper.new(post, errors: errors)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
-    scraper.import(doc, post: true)
+    scraper.import(doc)
 
     expect(User.count).to eq(1)
     expect(Icon.count).to eq(1)

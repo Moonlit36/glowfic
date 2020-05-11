@@ -141,7 +141,7 @@ class PostScraper < Object
     end
 
     scraper = ReplyScraper.new(@post, console: @console_import)
-    scraper.import(doc, post: true)
+    scraper.import(doc)
   end
 
   def import_replies_from_doc(doc)

@@ -2,7 +2,7 @@ require "spec_helper"
 
 RSpec.describe ReplyScraper do
   it "should raise an error when an unexpected character is found" do
-    post = Post.new(board_id: 3, subject: 'linear b', status: Post::STATUS_COMPLETE, is_import: true)
+    post = Post.new(board_id: 3, subject: 'linear b', status: Post.statuses[:complete], is_import: true)
 
     scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
@@ -23,7 +23,7 @@ RSpec.describe ReplyScraper do
     user = create(:user, username: "Marri")
     board = create(:board, creator: user)
 
-    post = Post.new(board: board, subject: 'linear b', status: Post::STATUS_COMPLETE, is_import: true)
+    post = Post.new(board: board, subject: 'linear b', status: Post.statuses[:complete], is_import: true)
 
     scraper = ReplyScraper.new(post, console: true)
     allow(STDIN).to receive(:gets).and_return(user.username)
@@ -59,7 +59,7 @@ RSpec.describe ReplyScraper do
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
 
-    post = Post.new(board: board, subject: 'linear b', status: Post::STATUS_COMPLETE, is_import: true)
+    post = Post.new(board: board, subject: 'linear b', status: Post.statuses[:complete], is_import: true)
 
     scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
@@ -91,7 +91,7 @@ RSpec.describe ReplyScraper do
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
 
-    post = Post.new(board: board, subject: 'linear b', status: Post::STATUS_COMPLETE, is_import: true)
+    post = Post.new(board: board, subject: 'linear b', status: Post.statuses[:complete], is_import: true)
 
     scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")

@@ -4,7 +4,6 @@ RSpec.describe ReplyScraper do
   let(:user) { create(:user, username: "Marri") }
   let(:board) { create(:board, creator: user) }
   let(:post) { Post.new(board: board, subject: 'linear b', status: Post.statuses[:complete], is_import: true) }
-  let(:errors) { ActiveModel::Errors.new(PostScraper) }
 
   let(:doc) do
     url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
@@ -13,13 +12,13 @@ RSpec.describe ReplyScraper do
   end
 
   it "should raise an error when an unexpected character is found" do
-    scraper = ReplyScraper.new(post, errors: errors)
+    scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     expect { scraper.import(doc) }.to raise_error(UnrecognizedUsernameError)
   end
 
   it "should scrape character, user and icon properly" do
-    scraper = ReplyScraper.new(post, console: true, errors: errors)
+    scraper = ReplyScraper.new(post, console: true)
     allow(STDIN).to receive(:gets).and_return(user.username)
     expect(scraper).to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     scraper.import(doc)
@@ -43,7 +42,7 @@ RSpec.describe ReplyScraper do
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
 
-    scraper = ReplyScraper.new(post, errors: errors)
+    scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     scraper.import(doc)
 
@@ -63,7 +62,7 @@ RSpec.describe ReplyScraper do
     expect(Icon.count).to eq(1)
     expect(Character.count).to eq(1)
 
-    scraper = ReplyScraper.new(post, errors: errors)
+    scraper = ReplyScraper.new(post)
     expect(scraper).not_to receive(:print).with("User ID or username for wild_pegasus_appeared? ")
     scraper.import(doc)
 

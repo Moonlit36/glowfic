@@ -45,7 +45,6 @@ class Post < ApplicationRecord
   before_create :build_initial_flat_post, :set_timestamps
   after_create :create_written
   before_update :set_timestamps
-  after_update :update_written
   before_validation :set_last_user, on: :create
   after_commit :notify_followers, on: :create
 

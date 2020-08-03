@@ -153,9 +153,10 @@ class PostScraper < Object
     img_keyword = doc.at_css('.entry .userpic img').try(:attribute, 'title').try(:value)
     created_at = doc.at_css('.entry .datetime').text
     content = doc.at_css('.entry-content').inner_html
+    content = strip_content(content)
 
-    @post = Post.new(board_id: @board_id, section_id: @section_id, status: @status, subject: subject)
-    @post.written.content = strip_content(content)
+    @post = Post.new(board_id: @board_id, section_id: @section_id, status: @status, subject: subject, content: content)
+    @post.written.content = content
     @post.created_at = @post.updated_at = @post.edited_at = @post.written.created_at = @post.written.updated_at = created_at
     @post.is_import = true
 
@@ -166,10 +167,12 @@ class PostScraper < Object
     end
 
     set_from_username(@post.written, username)
+    @post.character = @post.written.character
     @post.user = @post.written.user
     @post.last_user_id = @post.user_id
 
     set_from_icon(@post.written, img_url, img_keyword)
+    @post.icon = @post.written.icon
 
     Audited.audit_class.as_user(@post.user) do
       @post.save!

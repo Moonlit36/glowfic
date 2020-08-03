@@ -1309,6 +1309,8 @@ RSpec.describe RepliesController do
         end
 
         counts = replies.map(&:id).zip([1, 1, 2, 2, 6, 2]).to_h
+        writtens = replies.collect{ |r| r.post.written.id }
+        writtens.each { |id| counts[id] = 1 }
 
         get :search, params: { commit: true, sort: 'created_old' }
         expect(assigns(:audits)).to eq(counts)

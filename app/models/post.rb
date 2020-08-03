@@ -33,7 +33,7 @@ class Post < ApplicationRecord
 
   has_one :written, -> { where(reply_order: 0) }, class_name: 'Reply', inverse_of: :post
 
-  attr_accessor :is_import
+  attr_accessor :is_import, :skip_written
   attr_writer :skip_edited
 
   validates :subject, presence: true
@@ -340,6 +340,7 @@ class Post < ApplicationRecord
   end
 
   def create_written
+    return if skip_written
     self.written = Reply.create!(
       post: self,
       reply_order: 0,

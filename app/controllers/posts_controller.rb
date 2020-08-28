@@ -123,7 +123,7 @@ class PostsController < WritableController
       @author_ids = @post.board.writer_ids - [current_user.id]
       @authors_from_board = true
     end
-    @post.linked_post_joins.build(linked_post: nil, linking_post: @post)
+    @post.linked_post_joins.build(linked_post: Post.new)
   end
 
   def create
@@ -451,7 +451,14 @@ class PostsController < WritableController
       :character_alias_id,
       :authors_locked,
       :audit_comment,
-      :private_note
+      :private_note,
+      post_links_attributes: [
+        :id,
+        :linked_post_id,
+        :relationship,
+        :approved,
+        :_destroy,
+      ],
     ]
 
     # prevents us from setting (and saving) associations on preview()

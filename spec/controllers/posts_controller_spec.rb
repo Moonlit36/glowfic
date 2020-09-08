@@ -81,30 +81,31 @@ RSpec.describe PostsController do
       expect(response.status).to eq(200)
     end
 
-    it "paginates" do
-      create_list(:post, 26)
-      get :index
-      num_posts_fetched = controller.instance_variable_get('@posts').total_pages
-      expect(num_posts_fetched).to eq(2)
-    end
+    context "with many posts" do
+      before(:each) { create_list(:post, 26) }
 
-    it "only fetches most recent threads" do
-      create_list(:post, 26)
-      oldest = Post.ordered_by_id.first
-      get :index
-      ids_fetched = controller.instance_variable_get('@posts').map(&:id)
-      expect(ids_fetched).not_to include(oldest.id)
-    end
+      let(:oldest) { Post.ordered_by_id.first }
 
-    it "only fetches most recent threads based on updated_at" do
-      create_list(:post, 26)
-      oldest = Post.ordered_by_id.first
-      next_oldest = Post.ordered_by_id.second
-      oldest.update!(status: :complete)
-      get :index
-      ids_fetched = controller.instance_variable_get('@posts').map(&:id)
-      expect(ids_fetched.count).to eq(25)
-      expect(ids_fetched).not_to include(next_oldest.id)
+      it "paginates" do
+        get :index
+        num_posts_fetched = controller.instance_variable_get('@posts').total_pages
+        expect(num_posts_fetched).to eq(2)
+      end
+
+      it "only fetches most recent threads" do
+        get :index
+        ids_fetched = controller.instance_variable_get('@posts').map(&:id)
+        expect(ids_fetched).not_to include(oldest.id)
+      end
+
+      it "only fetches most recent threads based on updated_at" do
+        next_oldest = Post.ordered_by_id.second
+        oldest.update!(status: :complete)
+        get :index
+        ids_fetched = controller.instance_variable_get('@posts').map(&:id)
+        expect(ids_fetched.count).to eq(25)
+        expect(ids_fetched).not_to include(next_oldest.id)
+      end
     end
 
     it "orders posts by tagged_at" do
@@ -211,7 +212,7 @@ RSpec.describe PostsController do
       end
 
       it "filters by authors" do
-        posts = Array.new(4) { create(:post) }
+        posts = create_list(:post, 4)
         filtered_post = posts.last
         first_post = posts.first
         create(:reply, post: first_post, user: filtered_post.user)
@@ -258,7 +259,7 @@ RSpec.describe PostsController do
       end
 
       it "sorts posts by tagged_at" do
-        posts = Array.new(4) do create(:post) end
+        posts = create_list(:post, 4)
         create(:reply, post: posts[2])
         create(:reply, post: posts[1])
         get :search, params: { commit: true }
@@ -276,6 +277,8 @@ RSpec.describe PostsController do
   end
 
   describe "GET new" do
+    let(:user) { create(:user) }
+
     it "requires login" do
       get :new
       expect(response).to redirect_to(root_url)
@@ -283,7 +286,6 @@ RSpec.describe PostsController do
     end
 
     it "sets relevant fields" do
-      user = create(:user)
       char1 = create(:character, user: user, name: 'alphafirst')
       user.update!(active_character: char1)
       user.reload
@@ -330,7 +332,6 @@ RSpec.describe PostsController do
     end
 
     it "defaults authors to be the current user in open boards" do
-      user = create(:user)
       login_as(user)
       create(:user) # user not in the board
       board_creator = create(:user) # user in the board
@@ -341,10 +342,9 @@ RSpec.describe PostsController do
     end
 
     it "defaults authors to be board authors in closed boards" do
-      user = create(:user)
       login_as(user)
       coauthor = create(:user)
-      create(:user) # other_user
+      create(:user)
       board = create(:board, creator: user, writers: [coauthor])
       get :new, params: { board_id: board.id }
       expect(assigns(:post).board).to eq(board)
@@ -353,6 +353,9 @@ RSpec.describe PostsController do
   end
 
   describe "POST create" do
+    let(:user) { create(:user) }
+    let(:coauthor) { create(:user) }
+
     it "requires login" do
       post :create
       expect(response).to redirect_to(root_url)
@@ -361,16 +364,17 @@ RSpec.describe PostsController do
 
     context "scrape" do
       include ActiveJob::TestHelper
+
+      let(:user) { create(:importing_user) }
+
       it "requires valid user" do
-        user = create(:user)
-        login_as(user)
+        login_as(create(:user))
         post :create, params: { button_import: true }
         expect(response).to redirect_to(new_post_path)
         expect(flash[:error]).to eq("You do not have access to this feature.")
       end
 
       it "requires valid dreamwidth url" do
-        user = create(:importing_user)
         login_as(user)
         post :create, params: { button_import: true, dreamwidth_url: 'http://www.google.com' }
         expect(response).to render_template(:new)
@@ -379,7 +383,6 @@ RSpec.describe PostsController do
 
       it "requires extant usernames" do
         clear_enqueued_jobs
-        user = create(:importing_user)
         login_as(user)
         url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
         stub_fixture(url, 'scrape_no_replies')
@@ -392,7 +395,6 @@ RSpec.describe PostsController do
 
       it "scrapes" do
         clear_enqueued_jobs
-        user = create(:importing_user)
         login_as(user)
         create(:character, user: user, screenname: 'wild-pegasus-appeared')
         url = 'http://wild-pegasus-appeared.dreamwidth.org/403.html?style=site&view=flat'
@@ -405,9 +407,9 @@ RSpec.describe PostsController do
     end
 
     context "preview" do
+      before(:each) { login_as(user) }
+
       it "sets expected variables" do
-        user = create(:user)
-        login_as(user)
         setting1 = create(:setting)
         setting2 = create(:setting)
         warning1 = create(:content_warning)
@@ -418,7 +420,6 @@ RSpec.describe PostsController do
         char2 = create(:template_character, user: user)
         icon = create(:icon)
         calias = create(:alias, character: char1)
-        coauthor = create(:user)
         expect(controller).to receive(:editor_setup).and_call_original
         expect(controller).to receive(:setup_layout_gon).and_call_original
         post :create, params: {
@@ -476,8 +477,6 @@ RSpec.describe PostsController do
       end
 
       it "does not crash without arguments" do
-        user = create(:user)
-        login_as(user)
         post :create, params: { button_preview: true }
         expect(response).to render_template(:preview)
         expect(assigns(:written)).to be_an_instance_of(Post)
@@ -486,10 +485,6 @@ RSpec.describe PostsController do
       end
 
       it "does not create authors or viewers" do
-        user = create(:user)
-        login_as(user)
-
-        coauthor = create(:user)
         board = create(:board, creator: user, authors_locked: true)
 
         expect {
@@ -564,8 +559,6 @@ RSpec.describe PostsController do
     end
 
     it "creates new post authors correctly" do
-      user = create(:user)
-      other_user = create(:user)
       create(:user) # user should not be author
       board_creator = create(:user) # user should not be author
       board = create(:board, creator: board_creator)
@@ -579,7 +572,7 @@ RSpec.describe PostsController do
               subject: 'a',
               user_id: user.id,
               board_id: board.id,
-              unjoined_author_ids: [other_user.id],
+              unjoined_author_ids: [coauthor.id],
               private_note: 'there is a note!'
             }
           }
@@ -587,7 +580,7 @@ RSpec.describe PostsController do
       end
 
       post = assigns(:post).reload
-      expect(post.tagging_authors).to match_array([user, other_user])
+      expect(post.tagging_authors).to match_array([user, coauthor])
 
       post_author = post.author_for(user)
       expect(post_author.can_owe).to eq(true)
@@ -595,14 +588,13 @@ RSpec.describe PostsController do
       expect(post_author.joined_at).to be_the_same_time_as(time)
       expect(post_author.private_note).to eq('there is a note!')
 
-      other_post_author = post.author_for(other_user)
+      other_post_author = post.author_for(coauthor)
       expect(other_post_author.can_owe).to eq(true)
       expect(other_post_author.joined).to eq(false)
       expect(other_post_author.joined_at).to be_nil
     end
 
     it "handles post submitted with no authors" do
-      user = create(:user)
       create(:user) # non-author
       board_creator = create(:user)
       board = create(:board, creator: board_creator)
@@ -633,11 +625,9 @@ RSpec.describe PostsController do
     end
 
     it "adds new post authors to board cameo" do
-      user = create(:user)
-      other_user = create(:user)
-      third_user = create(:user)
+      new_author = create(:user)
       create(:user) # separate user
-      board = create(:board, creator: user, writers: [other_user])
+      board = create(:board, creator: user, writers: [coauthor])
 
       login_as(user)
       expect {
@@ -646,22 +636,20 @@ RSpec.describe PostsController do
             subject: 'a',
             user_id: user.id,
             board_id: board.id,
-            unjoined_author_ids: [user.id, other_user.id, third_user.id]
+            unjoined_author_ids: [user.id, coauthor.id, new_author.id]
           }
         }
       }.to change { BoardAuthor.count }.by(1)
 
       post = assigns(:post).reload
-      expect(post.tagging_authors).to match_array([user, other_user, third_user])
+      expect(post.tagging_authors).to match_array([user, coauthor, new_author])
 
       board.reload
-      expect(board.writers).to match_array([user, other_user])
-      expect(board.cameos).to match_array([third_user])
+      expect(board.writers).to match_array([user, coauthor])
+      expect(board.cameos).to match_array([new_author])
     end
 
     it "does not add to cameos of open boards" do
-      user = create(:user)
-      other_user = create(:user)
       board = create(:board)
       expect(board.cameos).to be_empty
 
@@ -672,13 +660,13 @@ RSpec.describe PostsController do
             subject: 'a',
             user_id: user.id,
             board_id: board.id,
-            unjoined_author_ids: [user.id, other_user.id]
+            unjoined_author_ids: [user.id, coauthor.id]
           }
         }
       }.not_to change { BoardAuthor.count }
 
       post = assigns(:post).reload
-      expect(post.tagging_authors).to match_array([user, other_user])
+      expect(post.tagging_authors).to match_array([user, coauthor])
 
       board.reload
       expect(board.writers).to eq([board.creator])
@@ -686,9 +674,7 @@ RSpec.describe PostsController do
     end
 
     it "handles new post authors already being in cameos" do
-      user = create(:user)
-      other_user = create(:user)
-      board = create(:board, creator: user, cameos: [other_user])
+      board = create(:board, creator: user, cameos: [coauthor])
 
       login_as(user)
       post :create, params: {
@@ -696,21 +682,20 @@ RSpec.describe PostsController do
           subject: 'a',
           user_id: user.id,
           board_id: board.id,
-          unjoined_author_ids: [user.id, other_user.id]
+          unjoined_author_ids: [user.id, coauthor.id]
         }
       }
 
       expect(flash[:success]).to eq("You have successfully posted.")
       post = assigns(:post).reload
-      expect(post.tagging_authors).to match_array([user, other_user])
+      expect(post.tagging_authors).to match_array([user, coauthor])
 
       board.reload
       expect(board.creator).to eq(user)
-      expect(board.cameos).to match_array([other_user])
+      expect(board.cameos).to match_array([coauthor])
     end
 
     it "handles invalid posts" do
-      user = create(:user)
       login_as(user)
       setting1 = create(:setting)
       setting2 = create(:setting)
@@ -720,7 +705,6 @@ RSpec.describe PostsController do
       label2 = create(:label)
       char1 = create(:character, user: user)
       char2 = create(:template_character, user: user)
-      coauthor = create(:user)
       expect(controller).to receive(:editor_setup).and_call_original
       expect(controller).to receive(:setup_layout_gon).and_call_original
 
@@ -776,7 +760,6 @@ RSpec.describe PostsController do
     end
 
     it "creates a post" do
-      user = create(:user)
       login_as(user)
       board = create(:board)
       section = create(:board_section, board: board)
@@ -790,7 +773,6 @@ RSpec.describe PostsController do
       warning2 = create(:content_warning)
       label1 = create(:label)
       label2 = create(:label)
-      coauthor = create(:user)
 
       expect {
         post :create, params: {
@@ -851,7 +833,6 @@ RSpec.describe PostsController do
     end
 
     it "generates a flat post" do
-      user = create(:user)
       login_as(user)
       post :create, params: {
         post: {
@@ -866,7 +847,6 @@ RSpec.describe PostsController do
     end
 
     context "with blocks" do
-      let(:user) { create(:user) }
       let(:blocked) { create(:user) }
       let(:blocking) { create(:user) }
       let(:other_user) { create(:user) }
@@ -930,8 +910,10 @@ RSpec.describe PostsController do
   end
 
   describe "GET show" do
+    let(:post) { create(:post) }
+    let(:user) { create(:user) }
+
     it "does not require login" do
-      post = create(:post)
       get :show, params: { id: post.id }
       expect(response).to have_http_status(200)
       expect(assigns(:javascripts)).to include('posts/show')
@@ -957,7 +939,6 @@ RSpec.describe PostsController do
     end
 
     it "works with login" do
-      post = create(:post)
       login
       get :show, params: { id: post.id }
       expect(response).to have_http_status(200)
@@ -965,8 +946,6 @@ RSpec.describe PostsController do
     end
 
     it "marks read multiple times" do
-      post = create(:post)
-      user = create(:user)
       login_as(user)
       expect(post.last_read(user)).to be_nil
       get :show, params: { id: post.id }
@@ -984,8 +963,6 @@ RSpec.describe PostsController do
     end
 
     it "marks read even if post is ignored" do
-      post = create(:post)
-      user = create(:user)
       login_as(user)
       post.ignore(user)
       expect(post.reload.first_unread_for(user)).to eq(post)
@@ -1004,7 +981,6 @@ RSpec.describe PostsController do
     end
 
     it "handles invalid pages" do
-      post = create(:post)
       get :show, params: { id: post.id, page: 'invalid' }
       expect(flash[:error]).to eq('Page not recognized, defaulting to page 1.')
       expect(assigns(:page)).to eq(1)
@@ -1013,7 +989,6 @@ RSpec.describe PostsController do
     end
 
     it "handles invalid unread page when logged out" do
-      post = create(:post)
       get :show, params: { id: post.id, page: 'unread' }
       expect(flash[:error]).to eq("You must be logged in to view unread posts.")
       expect(assigns(:page)).to eq(1)
@@ -1022,14 +997,12 @@ RSpec.describe PostsController do
     end
 
     it "handles pages outside range" do
-      post = create(:post)
       create_list(:reply, 5, post: post)
       get :show, params: { id: post.id, per_page: 1, page: 10 }
       expect(response).to redirect_to(post_url(post, page: 5, per_page: 1))
     end
 
     it "handles page=last with replies" do
-      post = create(:post)
       create_list(:reply, 5, post: post)
       get :show, params: { id: post.id, per_page: 1, page: 'last' }
       expect(assigns(:page)).to eq(5)
@@ -1038,7 +1011,6 @@ RSpec.describe PostsController do
     end
 
     it "handles page=last with no replies" do
-      post = create(:post)
       get :show, params: { id: post.id, page: 'last' }
       expect(assigns(:page)).to eq(1)
       expect(response).to have_http_status(200)
@@ -1048,8 +1020,6 @@ RSpec.describe PostsController do
     it "calculates audits" do
       Reply.auditing_enabled = true
       Post.auditing_enabled = true
-      post = create(:post)
-
       replies = Audited.audit_class.as_user(post.user) do
         create_list(:reply, 6, post: post, user: post.user)
       end
@@ -1086,7 +1056,6 @@ RSpec.describe PostsController do
       end
 
       it "renders HAML for logged in user" do
-        post = create(:post)
         create(:reply, post: post)
         character = create(:character)
         login_as(character.user)
@@ -1105,7 +1074,6 @@ RSpec.describe PostsController do
       end
 
       it "displays quick switch properly" do
-        post = create(:post)
         reply = create(:reply, post: post, with_icon: true, with_character: true)
         login_as(reply.user)
         get :show, params: { id: post.id }
@@ -1114,11 +1082,10 @@ RSpec.describe PostsController do
     end
 
     context "with at_id" do
-      let(:post) { create(:post) }
+      let(:last_reply) { post.replies.ordered.last }
+      let(:second_last_reply) { post.replies.ordered.last(2).first }
 
-      before(:each) do
-        create_list(:reply, 5, post: post)
-      end
+      before(:each) { create_list(:reply, 5, post: post) }
 
       it "shows error if reply not found" do
         get :show, params: { id: post.id, at_id: -1 }
@@ -1133,7 +1100,6 @@ RSpec.describe PostsController do
       end
 
       it "shows error if no unread" do
-        user = create(:user)
         post.mark_read(user)
         login_as(user)
         get :show, params: { id: post.id, at_id: 'unread' }
@@ -1148,7 +1114,6 @@ RSpec.describe PostsController do
       end
 
       it "works for specified reply" do
-        last_reply = post.replies.ordered.last
         get :show, params: { id: post.id, at_id: last_reply.id }
         expect(assigns(:replies)).to eq([last_reply])
         expect(assigns(:replies).current_page.to_i).to eq(1)
@@ -1156,7 +1121,6 @@ RSpec.describe PostsController do
       end
 
       it "works for specified reply with page settings" do
-        second_last_reply = post.replies.ordered.last(2).first
         get :show, params: { id: post.id, at_id: second_last_reply.id, per_page: 1 }
         expect(assigns(:replies)).to eq([second_last_reply])
         expect(assigns(:replies).current_page.to_i).to eq(1)
@@ -1164,8 +1128,6 @@ RSpec.describe PostsController do
       end
 
       it "works for page settings incompatible with specified reply" do
-        last_reply = post.replies.ordered.last
-        second_last_reply = post.replies.ordered.last(2).first
         get :show, params: { id: post.id, at_id: second_last_reply.id, per_page: 1, page: 2 }
         expect(assigns(:replies)).to eq([last_reply])
         expect(assigns(:replies).current_page.to_i).to eq(2)
@@ -1173,10 +1135,7 @@ RSpec.describe PostsController do
       end
 
       it "works for unread" do
-        third_reply = post.replies.ordered[2]
-        second_last_reply = post.replies.ordered[-2]
-        user = create(:user)
-        post.mark_read(user, at_time: third_reply.created_at)
+        post.mark_read(user, at_time: post.replies.ordered[2].created_at)
         expect(post.first_unread_for(user)).to eq(second_last_reply)
         login_as(user)
         get :show, params: { id: post.id, at_id: 'unread', per_page: 1 }
@@ -1188,9 +1147,7 @@ RSpec.describe PostsController do
 
     context "page=unread" do
       it "goes to the end if you're up to date" do
-        post = create(:post)
         create_list(:reply, 3, post: post, user: post.user)
-        user = create(:user)
         post.mark_read(user)
         login_as(user)
         get :show, params: { id: post.id, page: 'unread', per_page: 1 }
@@ -1198,19 +1155,15 @@ RSpec.describe PostsController do
       end
 
       it "goes to beginning if you've never read it" do
-        post = create(:post)
-        user = create(:user)
         login_as(user)
         get :show, params: { id: post.id, page: 'unread' }
         expect(assigns(:page)).to eq(1)
       end
 
       it "goes to post page if you're behind" do
-        post = create(:post)
         reply1 = create(:reply, post: post, user: post.user)
-        Timecop.freeze(reply1.created_at + 1.second) do create(:reply, post: post, user: post.user) end # second reply
-        Timecop.freeze(reply1.created_at + 2.seconds) do create(:reply, post: post, user: post.user) end # third reply
-        user = create(:user)
+        Timecop.freeze(reply1.created_at + 1.second) { create(:reply, post: post, user: post.user) }
+        Timecop.freeze(reply1.created_at + 2.seconds) { create(:reply, post: post, user: post.user) }
         post.mark_read(user, at_time: reply1.created_at)
         login_as(user)
         get :show, params: { id: post.id, page: 'unread', per_page: 1 }
@@ -1219,16 +1172,16 @@ RSpec.describe PostsController do
     end
 
     context "with author" do
+      let(:user) { post.user }
+
       it "works" do
-        post = create(:post)
-        login_as(post.user)
+        login_as(user)
         get :show, params: { id: post.id }
         expect(response).to have_http_status(200)
       end
 
       it "sets reply variable using build_new_reply_for" do
         post = create(:post, with_icon: true, with_character: true)
-        user = post.user
         post.reload
 
         # mock Post.find_by_id so we can mock post.build_new_reply_for
@@ -1247,10 +1200,10 @@ RSpec.describe PostsController do
     end
 
     context "with non-author who can write" do
+      before(:each) { login_as(user) }
+
       it "works" do
         post = create(:post, authors_locked: false)
-        user = create(:user)
-        login_as(user)
         expect(post).to be_taggable_by(user)
         get :show, params: { id: post.id }
         expect(response).to have_http_status(200)
@@ -1258,13 +1211,11 @@ RSpec.describe PostsController do
 
       it "sets reply variable using build_new_reply_for" do
         post = create(:post, with_icon: true, with_character: true)
-        user = create(:user)
         post.reload
 
         # mock Post.find_by_id so we can mock post.build_new_reply_for
         allow(Post).to receive(:find_by_id).with(post.id.to_s).and_return(post)
 
-        login_as(user)
         expect(post).to be_taggable_by(user)
         expect(post).to receive(:build_new_reply_for).with(user, {}).and_call_original
 
@@ -1277,7 +1228,6 @@ RSpec.describe PostsController do
     context "with user who cannot write" do
       it "works and does not call build_new_reply_for" do
         post = create(:post, authors_locked: true)
-        user = create(:user)
         post.reload
 
         # mock Post.find_by_id so we can mock post.build_new_reply_for
@@ -1296,6 +1246,8 @@ RSpec.describe PostsController do
   end
 
   describe "GET history" do
+    let(:post) { create(:post) }
+
     it "requires post" do
       login
       get :history, params: { id: -1 }
@@ -1304,22 +1256,24 @@ RSpec.describe PostsController do
     end
 
     it "works logged out" do
-      get :history, params: { id: create(:post).id }
+      get :history, params: { id: post.id }
       expect(response.status).to eq(200)
     end
 
     it "works logged in" do
       login
-      get :history, params: { id: create(:post).id }
+      get :history, params: { id: post.id }
       expect(response.status).to eq(200)
     end
 
     context "with render_view" do
       render_views
 
+      before(:each) { Reply.auditing_enabled = true }
+
+      after(:each) { Reply.auditing_enabled = false }
+
       it "works" do
-        Post.auditing_enabled = true
-        post = create(:post)
         post.update!(privacy: :access_list)
         post.update!(board: create(:board))
         post.update!(content: 'new content')
@@ -1329,12 +1283,15 @@ RSpec.describe PostsController do
         get :history, params: { id: post.id }
 
         expect(response.status).to eq(200)
-        Post.auditing_enabled = false
       end
     end
   end
 
   describe "GET delete_history" do
+    let(:user) { create(:user)}
+    let(:post) { create(:post, user: user) }
+    let(:reply) { create(:reply, post: post) }
+
     before(:each) { Reply.auditing_enabled = true }
 
     after(:each) { Reply.auditing_enabled = false }
@@ -1354,16 +1311,13 @@ RSpec.describe PostsController do
 
     it "requires permission" do
       login
-      post = create(:post)
       get :delete_history, params: { id: post.id }
       expect(response).to redirect_to(post_url(post))
       expect(flash[:error]).to eq("You do not have permission to modify this post.")
     end
 
     it "sets correct variables" do
-      post = create(:post)
-      login_as(post.user)
-      reply = create(:reply, post: post)
+      login_as(user)
       reply.destroy!
       get :delete_history, params: { id: post.id }
       expect(response).to have_http_status(200)
@@ -1371,9 +1325,7 @@ RSpec.describe PostsController do
     end
 
     it "ignores restored replies" do
-      post = create(:post)
-      login_as(post.user)
-      reply = create(:reply, post: post)
+      login_as(user)
       reply.destroy!
       restore(reply)
       get :delete_history, params: { id: post.id }
@@ -1381,14 +1333,11 @@ RSpec.describe PostsController do
     end
 
     it "only selects more recent restore" do
-      post = create(:post)
-      login_as(post.user)
-      reply = create(:reply, post: post, content: 'old content')
+      login_as(user)
       reply.destroy!
       restore(reply)
       reply = Reply.find_by_id(reply.id)
-      reply.content = 'new content'
-      reply.save!
+      reply.update!(content: 'new content')
       reply.destroy!
       get :delete_history, params: { id: post.id }
       expect(assigns(:deleted_audits).count).to eq(1)
@@ -1519,6 +1468,9 @@ RSpec.describe PostsController do
   end
 
   describe "PUT update" do
+    let(:user) { create(:user) }
+    let(:post) { create(:post) }
+
     it "requires login" do
       put :update, params: { id: -1 }
       expect(response).to redirect_to(root_url)
@@ -1534,7 +1486,6 @@ RSpec.describe PostsController do
 
     it "requires post be visible to user" do
       post = create(:post, privacy: :private)
-      user = create(:user)
       login_as(user)
       expect(post.visible_to?(user)).not_to eq(true)
 
@@ -1552,10 +1503,7 @@ RSpec.describe PostsController do
     end
 
     it "does not require note from coauthors" do
-      post = create(:post, privacy: :access_list)
-      user = create(:user)
-      post.viewers << user
-      post.authors << user
+      post = create(:post, privacy: :access_list, viewers: [user], unjoined_authors: [user])
       login_as(user)
       put :update, params: { id: post.id }
       expect(flash[:success]).not_to be_nil
@@ -1589,7 +1537,6 @@ RSpec.describe PostsController do
       # rubocop:enable RSpec/RepeatedExample
 
       it "works with at_id" do
-        post = create(:post)
         unread_reply = build(:reply, post: post)
         Timecop.freeze(post.created_at + 1.minute) do
           unread_reply.save!
@@ -1610,8 +1557,6 @@ RSpec.describe PostsController do
       end
 
       it "works without at_id" do
-        post = create(:post)
-        user = create(:user)
         post.mark_read(user)
         expect(post.reload.send(:view_for, user)).not_to be_nil
         login_as(user)
@@ -1624,8 +1569,6 @@ RSpec.describe PostsController do
       end
 
       it "works when ignored with at_id" do
-        user = create(:user)
-        post = create(:post)
         unread_reply = build(:reply, post: post)
         Timecop.freeze(post.created_at + 1.minute) do
           unread_reply.save!
@@ -1648,8 +1591,6 @@ RSpec.describe PostsController do
       end
 
       it "works when ignored without at_id" do
-        post = create(:post)
-        user = create(:user)
         post.mark_read(user)
         post.ignore(user)
         expect(post.reload.first_unread_for(user)).to be_nil
@@ -1665,7 +1606,6 @@ RSpec.describe PostsController do
 
     context "change status" do
       it "requires permission" do
-        post = create(:post)
         login
         put :update, params: { id: post.id, status: 'complete' }
         expect(response).to redirect_to(post_url(post))
@@ -1674,7 +1614,6 @@ RSpec.describe PostsController do
       end
 
       it "requires valid status" do
-        post = create(:post)
         login_as(post.user)
         put :update, params: { id: post.id, status: 'invalid' }
         expect(response).to redirect_to(post_url(post))
@@ -1707,8 +1646,6 @@ RSpec.describe PostsController do
 
       Post.statuses.each_key do |status|
         context "to #{status}" do
-          let(:post) { create(:post) }
-
           it "works for creator" do
             login_as(post.user)
             put :update, params: { id: post.id, status: status }
@@ -1840,14 +1777,16 @@ RSpec.describe PostsController do
     end
 
     context "mark hidden" do
-      it "marks hidden" do
-        post = create(:post)
-        reply = create(:reply, post: post)
-        user = create(:user)
-        post.mark_read(user, at_time: post.read_time_for([reply]))
-        time_read = post.reload.last_read(user)
+      let(:reply) { create(:reply, post: post) }
+      let(:time_read) { post.reload.last_read(user) }
 
+      before(:each) do
         login_as(user)
+        post.mark_read(user, at_time: post.read_time_for([reply]))
+        time_read
+      end
+
+      it "marks hidden" do
         expect(post.ignored_by?(user)).not_to eq(true)
 
         put :update, params: { id: post.id, hidden: 'true' }
@@ -1858,13 +1797,6 @@ RSpec.describe PostsController do
       end
 
       it "marks unhidden" do
-        post = create(:post)
-        reply = create(:reply, post: post)
-        user = create(:user)
-        login_as(user)
-        post.mark_read(user, at_time: post.read_time_for([reply]))
-        time_read = post.reload.last_read(user)
-
         post.ignore(user)
         expect(post.reload.ignored_by?(user)).to eq(true)
 
@@ -1877,10 +1809,9 @@ RSpec.describe PostsController do
     end
 
     context "preview" do
-      it "handles tags appropriately in memory and storage" do
-        user = create(:user)
-        login_as(user)
+      before(:each) { login_as(user) }
 
+      it "handles tags appropriately in memory and storage" do
         setting = create(:setting)
         rems = create(:setting)
         dupes = create(:setting, name: 'dupesetting')
@@ -1930,8 +1861,6 @@ RSpec.describe PostsController do
 
       it "sets expected variables" do
         Post.auditing_enabled = true
-        user = create(:user)
-        login_as(user)
         post = create(:post, user: user, subject: 'old', content: 'example')
         setting1 = create(:setting)
         setting2 = create(:setting)
@@ -2021,8 +1950,6 @@ RSpec.describe PostsController do
       end
 
       it "does not crash without arguments" do
-        user = create(:user)
-        login_as(user)
         post = create(:post, user: user)
         put :update, params: { id: post.id, button_preview: true }
         expect(response).to render_template(:preview)
@@ -2034,9 +1961,6 @@ RSpec.describe PostsController do
       end
 
       it "does not create authors or viewers" do
-        user = create(:user)
-        login_as(user)
-
         coauthor = create(:user)
         board = create(:board, creator: user, authors_locked: true)
         post = create(:post, user: user, board: board, authors_locked: true, privacy: :access_list)
@@ -2060,10 +1984,12 @@ RSpec.describe PostsController do
     end
 
     context "make changes" do
-      it "creates new tags if needed" do
-        user = create(:user)
-        login_as(user)
+      let(:coauthor) { create(:user) }
+      let(:post) { create(:post, user: user) }
 
+      before(:each) { login_as(user) }
+
+      it "creates new tags if needed" do
         setting = create(:setting)
         rems = create(:setting)
         dupes = create(:setting, name: 'dupesetting')
@@ -2111,9 +2037,6 @@ RSpec.describe PostsController do
       end
 
       it "uses extant tags if available" do
-        user = create(:user)
-        login_as(user)
-        post = create(:post, user: user)
         setting_ids = ['_setting']
         setting = create(:setting, name: 'setting')
         warning_ids = ['_warning']
@@ -2132,18 +2055,16 @@ RSpec.describe PostsController do
       end
 
       it "correctly updates when adding new authors" do
-        user = create(:user)
-        other_user = create(:user)
-        login_as(user)
-        post = create(:post, user: user)
-
         time = Time.zone.now + 5.minutes
+
+        expect(post.authors.size).to eq(1)
+
         Timecop.freeze(time) do
           expect {
             put :update, params: {
               id: post.id,
               post: {
-                unjoined_author_ids: [other_user.id]
+                unjoined_author_ids: [coauthor.id]
               }
             }
           }.to change { Post::Author.count }.by(1)
@@ -2151,7 +2072,7 @@ RSpec.describe PostsController do
 
         expect(response).to redirect_to(post_url(post))
         post.reload
-        expect(post.tagging_authors).to match_array([user, other_user])
+        expect(post.tagging_authors).to match_array([user, coauthor])
 
         # doesn't change joined time or invited status when inviting main user
         main_author = post.author_for(user)
@@ -2160,18 +2081,16 @@ RSpec.describe PostsController do
         expect(main_author.joined_at).to be_the_same_time_as(post.created_at)
 
         # doesn't set joined time but does set invited status when inviting new user
-        new_author = post.author_for(other_user)
+        new_author = post.author_for(coauthor)
         expect(new_author.can_owe).to eq(true)
         expect(new_author.joined).to eq(false)
         expect(new_author.joined_at).to be_nil
       end
 
       it "correctly updates when removing authors" do
-        user = create(:user)
         invited_user = create(:user)
         joined_user = create(:user)
 
-        login_as(user)
         time = Time.zone.now - 5.minutes
         post = reply = nil
         Timecop.freeze(time) do
@@ -2222,47 +2141,37 @@ RSpec.describe PostsController do
       end
 
       it "updates board cameos if necessary" do
-        user = create(:user)
-        other_user = create(:user)
-        third_user = create(:user)
-        login_as(user)
-        board = create(:board, creator: user, writers: [other_user])
+        new_author = create(:user)
+        board = create(:board, creator: user, writers: [coauthor])
         post = create(:post, user: user, board: board)
         put :update, params: {
           id: post.id,
           post: {
-            unjoined_author_ids: [other_user.id, third_user.id]
+            unjoined_author_ids: [coauthor.id, new_author.id]
           }
         }
         post.reload
         board.reload
-        expect(post.tagging_authors).to match_array([user, other_user, third_user])
-        expect(board.cameos).to match_array([third_user])
+        expect(post.tagging_authors).to match_array([user, coauthor, new_author])
+        expect(board.cameos).to match_array([new_author])
       end
 
       it "does not add to cameos of open boards" do
-        user = create(:user)
-        other_user = create(:user)
-        login_as(user)
-        board = create(:board)
+        board = post.board
         expect(board.cameos).to be_empty
-        post = create(:post, user: user, board: board)
         put :update, params: {
           id: post.id,
           post: {
-            unjoined_author_ids: [other_user.id]
+            unjoined_author_ids: [coauthor.id]
           }
         }
         post.reload
         board.reload
-        expect(post.tagging_authors).to match_array([user, other_user])
+        expect(post.tagging_authors).to match_array([user, coauthor])
         expect(board.cameos).to be_empty
       end
 
       it "orders tags" do
-        user = create(:user)
-        login_as(user)
-        post = create(:post, user: user)
         setting2 = create(:setting)
         setting3 = create(:setting)
         setting1 = create(:setting)
@@ -2297,9 +2206,6 @@ RSpec.describe PostsController do
         label = create(:label)
         reml = create(:label)
         dupel = create(:label, name: 'dupelabel')
-
-        user = create(:user)
-        login_as(user)
 
         post = create(:post, user: user, settings: [setting, rems], content_warnings: [warning, remw], labels: [label, reml])
         expect(Setting.count).to eq(3)
@@ -2366,7 +2272,6 @@ RSpec.describe PostsController do
       end
 
       it "works" do
-        user = create(:user)
         removed_author = create(:user)
         joined_author = create(:user)
 
@@ -2375,7 +2280,6 @@ RSpec.describe PostsController do
 
         newcontent = post.content + 'new'
         newsubj = post.subject + 'new'
-        login_as(user)
         board = create(:board)
         section = create(:board_section, board: board)
         char = create(:character, user: user)
@@ -2437,10 +2341,7 @@ RSpec.describe PostsController do
 
       it "does not allow coauthors to edit post text" do
         skip "Is not currently implemented on saving data"
-        user = create(:user)
-        coauthor = create(:user)
-        login_as(coauthor)
-        post = create(:post, user: user, authors: [user, coauthor], authors_locked: true)
+        post = create(:post, user: coauthor, authors: [user, coauthor], authors_locked: true)
         put :update, params: {
           id: post.id,
           post: {
@@ -2453,10 +2354,11 @@ RSpec.describe PostsController do
     end
 
     context "metadata" do
+      let(:coauthor) { create(:user) }
+      let(:post) { create(:post, subject: "test subject") }
+
       it "allows coauthors" do
-        coauthor = create(:user)
         login_as(coauthor)
-        post = create(:post, subject: "test subject")
         create(:reply, post: post, user: coauthor)
         put :update, params: {
           id: post.id,
@@ -2471,8 +2373,6 @@ RSpec.describe PostsController do
       end
 
       it "allows invited coauthors before they reply" do
-        user = create(:user)
-        coauthor = create(:user)
         login_as(coauthor)
         post = create(:post, user: user, authors: [user, coauthor], authors_locked: true, subject: "test subject")
         put :update, params: {
@@ -2489,7 +2389,6 @@ RSpec.describe PostsController do
 
       it "does not allow non-coauthors" do
         login
-        post = create(:post, subject: "test subject")
         put :update, params: {
           id: post.id,
           post: {
@@ -2505,7 +2404,6 @@ RSpec.describe PostsController do
 
     context "notes" do
       it "updates if there are no other changes" do
-        post = create(:post)
         login_as(post.user)
         expect(post.author_for(post.user).private_note).to be_nil
         put :update, params: {
@@ -2533,7 +2431,6 @@ RSpec.describe PostsController do
       end
 
       it "updates with coauthor" do
-        post = create(:post)
         reply = create(:reply, post: post)
         login_as(reply.user)
         expect(post.author_for(reply.user).private_note).to be_nil
@@ -2548,7 +2445,6 @@ RSpec.describe PostsController do
     end
 
     context "with blocks" do
-      let(:user) { create(:user) }
       let(:blocked) { create(:user) }
       let(:blocking) { create(:user) }
       let(:other_user) { create(:user) }
@@ -2651,6 +2547,8 @@ RSpec.describe PostsController do
   end
 
   describe "POST warnings" do
+    let(:warn_post) { create(:post) }
+
     it "requires a valid post" do
       post :warnings, params: { id: -1 }
       expect(response).to redirect_to(continuities_url)
@@ -2665,7 +2563,6 @@ RSpec.describe PostsController do
     end
 
     it "works for logged out" do
-      warn_post = create(:post)
       expect(session[:ignore_warnings]).to be_nil
       post :warnings, params: { id: warn_post.id, per_page: 10, page: 2 }
       expect(response).to redirect_to(post_url(warn_post, per_page: 10, page: 2))
@@ -2674,7 +2571,6 @@ RSpec.describe PostsController do
     end
 
     it "works for logged in" do
-      warn_post = create(:post)
       user = create(:user)
       expect(session[:ignore_warnings]).to be_nil
       expect(warn_post.send(:view_for, user)).to be_a_new_record
@@ -2690,6 +2586,8 @@ RSpec.describe PostsController do
   end
 
   describe "DELETE destroy" do
+    let(:post) { create(:post) }
+
     it "requires login" do
       delete :destroy, params: { id: -1 }
       expect(response).to redirect_to(root_url)
@@ -2706,7 +2604,6 @@ RSpec.describe PostsController do
     it "requires post permission" do
       user = create(:user)
       login_as(user)
-      post = create(:post)
       expect(post).not_to be_editable_by(user)
       delete :destroy, params: { id: post.id }
       expect(response).to redirect_to(post_url(post))
@@ -2714,7 +2611,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds" do
-      post = create(:post)
       login_as(post.user)
       delete :destroy, params: { id: post.id }
       expect(response).to redirect_to(continuities_url)
@@ -2734,7 +2630,6 @@ RSpec.describe PostsController do
     end
 
     it "handles destroy failure" do
-      post = create(:post)
       reply = create(:reply, user: post.user, post: post)
       login_as(post.user)
       expect_any_instance_of(Post).to receive(:destroy!).and_raise(ActiveRecord::RecordNotDestroyed, 'fake error')
@@ -2760,27 +2655,25 @@ RSpec.describe PostsController do
     end
 
     context "with views" do
-      render_views
+      let(:user) { create(:user) }
+      let(:post) { create(:post, user: user) }
 
-      def create_owed(user)
-        post = create(:post, user: user)
+      before(:each) do
+        login_as(user)
         create(:reply, post: post)
         post.mark_read(user)
       end
 
+      render_views
+
       it "succeeds" do
-        user = create(:user)
-        login_as(user)
-        create_owed(user)
         get :owed
         expect(response.status).to eq(200)
         expect(response.body).to include('note_go_strong')
       end
 
       it "succeeds with dark" do
-        user = create(:user, layout: 'starrydark')
-        login_as(user)
-        create_owed(user)
+        user.update!(layout: 'starrydark')
         get :owed
         expect(response.status).to eq(200)
         expect(response.body).to include('bullet_go_strong')
@@ -2820,9 +2713,14 @@ RSpec.describe PostsController do
         create(:post)
       }
 
-      it "shows hiatused posts" do
+      def make_post
         post = create(:post, user: user)
         create(:reply, post: post, user: other_user)
+        post
+      end
+
+      it "shows hiatused posts" do
+        post = make_post
         post.update!(status: :hiatus)
 
         get :owed, params: {view: 'hiatused'}
@@ -2831,11 +2729,7 @@ RSpec.describe PostsController do
       end
 
       it "shows auto-hiatused posts" do
-        post = nil
-        Timecop.freeze(Time.zone.now - 1.month) do
-          post = create(:post, user: user)
-          create(:reply, post: post, user: other_user)
-        end
+        post = Timecop.freeze(Time.zone.now - 1.month) { make_post }
         get :owed, params: {view: 'hiatused'}
         expect(response.status).to eq(200)
         expect(assigns(:posts)).to eq([post])
@@ -2843,78 +2737,83 @@ RSpec.describe PostsController do
     end
 
     context "with posts" do
-      let(:user) { create(:user) }
-      let(:other_user) { create(:user) }
+      let!(:user) { create(:user) }
+      let!(:other_user) { create(:user) }
       let(:post) { create(:post, user: user) }
 
-      before(:each) do
-        other_user
-        login_as(user)
-      end
+      before(:each) { login_as(user) }
 
-      it "shows a post if replied to by someone else" do
-        create(:reply, post_id: post.id, user_id: other_user.id)
+      context "with coauthor replies" do
+        before(:each) { create(:reply, post: post, user: other_user) }
 
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to match_array([post])
-      end
+        it "shows posts by default" do
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to match_array([post])
+        end
 
-      it "hides a post if you reply to it" do
-        create(:reply, post_id: post.id, user_id: other_user.id)
-        create(:reply, post_id: post.id, user_id: user.id)
+        it "hides a post if you reply to it" do
+          create(:reply, post: post, user: user)
 
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
-      end
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
 
-      it "does not show posts from site_testing" do
-        site_test = create(:board, id: Board::ID_SITETESTING)
+        it "does not show posts from site_testing" do
+          post.update!(board: create(:board, id: Board::ID_SITETESTING))
 
-        post.board = site_test
-        post.save!
-        create(:reply, post_id: post.id, user_id: other_user.id)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
 
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
-      end
+        it "hides completed threads" do
+          post.update!(status: :complete)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
 
-      it "hides completed threads" do
-        create(:reply, post: post, user: other_user)
-        post.update!(status: :complete)
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
-      end
+        it "hides abandoned threads" do
+          post.update!(status: :abandoned)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
 
-      it "hides abandoned threads" do
-        create(:reply, post: post, user: other_user)
-        post.update!(status: :abandoned)
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
-      end
+        it "shows hiatused threads by default" do
+          post.update!(status: :hiatus)
 
-      it "show hiatused threads by default" do
-        create(:reply, post_id: post.id, user_id: other_user.id)
-        post.update!(status: :hiatus)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to match_array([post])
+        end
 
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to match_array([post])
-      end
+        it "optionally hides hiatused threads" do
+          post.update!(status: :hiatus)
+          user.update!(hide_hiatused_tags_owed: true)
 
-      it "optionally hides hiatused threads" do
-        create(:reply, post_id: post.id, user_id: other_user.id)
-        post.update!(status: :hiatus)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
 
-        user.hide_hiatused_tags_owed = true
-        user.save!
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
+        it "shows threads with existing drafts" do
+          create(:reply, post: post, user: user)
+          create(:reply_draft, post: post, user: user)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to match_array([post])
+        end
+
+        it "does not show threads with drafts by coauthors" do
+          create(:reply, post: post, user: user)
+          create(:reply_draft, post: post, user: other_user)
+          get :owed
+          expect(response.status).to eq(200)
+          expect(assigns(:posts)).to be_empty
+        end
       end
 
       it "shows threads the user has been invited to" do
@@ -2935,32 +2834,14 @@ RSpec.describe PostsController do
       end
 
       it "orders posts by tagged_at" do
-        post2 = create(:post, user_id: user.id)
-        post3 = create(:post, user_id: user.id)
-        post1 = create(:post, user_id: user.id)
-        create(:reply, post_id: post3.id, user_id: other_user.id)
-        create(:reply, post_id: post2.id, user_id: other_user.id)
-        create(:reply, post_id: post1.id, user_id: other_user.id)
+        post2 = create(:post, user: user)
+        post3 = create(:post, user: user)
+        post1 = create(:post, user: user)
+        create(:reply, post: post3, user: other_user)
+        create(:reply, post: post2, user: other_user)
+        create(:reply, post: post1, user: other_user)
         get :owed
         expect(assigns(:posts)).to eq([post1, post2, post3])
-      end
-
-      it "shows threads with existing drafts" do
-        create(:reply, post: post, user: other_user)
-        create(:reply, post: post, user: user)
-        create(:reply_draft, post: post, user: user)
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to match_array([post])
-      end
-
-      it "does not show threads with drafts by coauthors" do
-        create(:reply, post: post, user: other_user)
-        create(:reply, post: post, user: user)
-        create(:reply_draft, post: post, user: other_user)
-        get :owed
-        expect(response.status).to eq(200)
-        expect(assigns(:posts)).to be_empty
       end
 
       it "shows solo threads" do
@@ -2984,6 +2865,7 @@ RSpec.describe PostsController do
     let(:controller_action) { "unread" }
     let(:params) { { } }
     let(:assign_variable) { :posts }
+    let(:user) { create(:user) }
 
     it "requires login" do
       get :unread
@@ -3002,10 +2884,9 @@ RSpec.describe PostsController do
     end
 
     it "shows appropriate posts" do
-      user = create(:user)
       time = Time.zone.now - 10.minutes
 
-      unread_post = create(:post) # post
+      unread_post = create(:post)
       opened_post1, opened_post2, read_post1, read_post2, hidden_post = Timecop.freeze(time) do
         opened_post1 = create(:post) # post & reply, read post
         opened_post2 = create(:post) # post & 2 replies, read post & reply
@@ -3057,8 +2938,6 @@ RSpec.describe PostsController do
     end
 
     it "manages board/post read time mismatches" do
-      user = create(:user)
-
       # no views exist
       unread_post = create(:post)
 
@@ -3099,8 +2978,9 @@ RSpec.describe PostsController do
     end
 
     context "opened" do
+      before(:each) { login_as(user) }
+
       it "accepts parameter to force opened mode" do
-        user = create(:user)
         expect(user.unread_opened).not_to eq(true)
         login_as(user)
         get :unread, params: { started: 'true' }
@@ -3110,7 +2990,7 @@ RSpec.describe PostsController do
       end
 
       it "shows appropriate posts" do
-        user = create(:user, unread_opened: true)
+        user.update!(unread_opened: true)
         time = Time.zone.now - 10.minutes
 
         unread_post = create(:post) # post
@@ -3161,6 +3041,11 @@ RSpec.describe PostsController do
   end
 
   describe "POST mark" do
+    let(:user) { create(:user) }
+    let(:private_post) { create(:post, privacy: :private) }
+    let(:post1) { create(:post) }
+    let(:post2) { create(:post) }
+
     it "requires login" do
       post :mark
       expect(response).to redirect_to(root_url)
@@ -3168,11 +3053,10 @@ RSpec.describe PostsController do
     end
 
     context "read" do
+      before(:each) { login_as(user) }
+
       it "skips invisible post" do
-        private_post = create(:post, privacy: :private)
-        user = create(:user)
         expect(private_post.visible_to?(user)).not_to eq(true)
-        login_as(user)
         post :mark, params: { marked_ids: [private_post.id], commit: "Mark Read" }
         expect(response).to redirect_to(unread_posts_url)
         expect(flash[:success]).to eq("0 posts marked as read.")
@@ -3180,11 +3064,6 @@ RSpec.describe PostsController do
       end
 
       it "reads posts" do
-        user = create(:user)
-        post1 = create(:post)
-        post2 = create(:post)
-        login_as(user)
-
         expect(post1.last_read(user)).to be_nil
         expect(post2.last_read(user)).to be_nil
 
@@ -3198,11 +3077,11 @@ RSpec.describe PostsController do
     end
 
     context "ignored" do
+      before(:each) { login_as(user) }
+
       it "skips invisible post" do
-        private_post = create(:post, privacy: :private)
-        user = create(:user)
         expect(private_post.visible_to?(user)).not_to eq(true)
-        login_as(user)
+
         post :mark, params: { marked_ids: [private_post.id] }
         expect(response).to redirect_to(unread_posts_url)
         expect(flash[:success]).to eq("0 posts hidden from this page.")
@@ -3210,11 +3089,6 @@ RSpec.describe PostsController do
       end
 
       it "ignores posts" do
-        user = create(:user)
-        post1 = create(:post)
-        post2 = create(:post)
-        login_as(user)
-
         expect(post1.visible_to?(user)).to eq(true)
         expect(post2.visible_to?(user)).to eq(true)
 
@@ -3227,8 +3101,6 @@ RSpec.describe PostsController do
       end
 
       it "does not mess with read timestamps" do
-        user = create(:user)
-
         time = Time.zone.now - 10.minutes
         post1 = create(:post, created_at: time, updated_at: time) # unread
         post2 = create(:post, created_at: time, updated_at: time) # partially read
@@ -3262,12 +3134,15 @@ RSpec.describe PostsController do
     end
 
     context "not owed" do
+      let(:owed_post) { create(:post, unjoined_authors: [user]) }
+      let(:author) { owed_post.author_for(user) }
+
+      before(:each) { login_as(user) }
+
       it "ignores invisible posts" do
-        user = create(:user)
         private_post = create(:post, privacy: :private, authors: [user])
         expect(private_post.visible_to?(user)).not_to eq(true)
-        expect(private_post.post_authors.find_by(user: user).can_owe).to eq(true)
-        login_as(user)
+        expect(private_post.author_for(user).can_owe).to eq(true)
         post :mark, params: { marked_ids: [private_post.id], commit: 'Remove from Replies Owed' }
         expect(response).to redirect_to(owed_posts_url)
         expect(flash[:success]).to eq("0 posts removed from replies owed.")
@@ -3275,10 +3150,7 @@ RSpec.describe PostsController do
       end
 
       it "deletes post author if the user has not yet joined" do
-        user = create(:user)
-        owed_post = create(:post, unjoined_authors: [user])
-        expect(owed_post.post_authors.find_by(user: user).can_owe).to eq(true)
-        login_as(user)
+        expect(author.can_owe).to eq(true)
         post :mark, params: { marked_ids: [owed_post.id], commit: 'Remove from Replies Owed' }
         expect(response).to redirect_to(owed_posts_url)
         expect(flash[:success]).to eq("1 post removed from replies owed.")
@@ -3286,22 +3158,23 @@ RSpec.describe PostsController do
       end
 
       it "updates post author if the user has joined" do
-        user = create(:user)
-        owed_post = create(:post, unjoined_authors: [user])
         create(:reply, post: owed_post, user: user)
-        expect(owed_post.post_authors.find_by(user: user).can_owe).to eq(true)
-        expect(owed_post.post_authors.find_by(user: user).joined).to eq(true)
-        login_as(user)
+        expect(author.can_owe).to eq(true)
+        expect(author.joined).to eq(true)
         post :mark, params: { marked_ids: [owed_post.id], commit: 'Remove from Replies Owed' }
         expect(response).to redirect_to(owed_posts_url)
         expect(flash[:success]).to eq("1 post removed from replies owed.")
-        expect(owed_post.post_authors.find_by(user: user).can_owe).to eq(false)
+        expect(author.reload.can_owe).to eq(false)
       end
     end
 
     context "newly owed" do
+      let(:owed_post) { create(:post, unjoined_authors: [user]) }
+      let(:author) { owed_post.author_for(user) }
+
+      before(:each) { login_as(user) }
+
       it "ignores invisible posts" do
-        user = create(:user)
         private_post = create(:post, privacy: :private, authors: [user])
         expect(private_post.visible_to?(user)).not_to eq(true)
         private_post.author_for(user).update!(can_owe: false)
@@ -3313,8 +3186,6 @@ RSpec.describe PostsController do
       end
 
       it "does nothing if the user has not yet joined" do
-        user = create(:user)
-        owed_post = create(:post, unjoined_authors: [user])
         owed_post.opt_out_of_owed(user)
         expect(owed_post.author_for(user)).to be_nil
         login_as(user)
@@ -3325,22 +3196,24 @@ RSpec.describe PostsController do
       end
 
       it "updates post author if the user has joined" do
-        user = create(:user)
-        owed_post = create(:post, unjoined_authors: [user])
         create(:reply, post: owed_post, user: user)
-        expect(owed_post.post_authors.find_by(user: user).joined).to eq(true)
+        expect(author.joined).to eq(true)
         owed_post.opt_out_of_owed(user)
-        expect(owed_post.post_authors.find_by(user: user).can_owe).to eq(false)
+        expect(author.reload.can_owe).to eq(false)
         login_as(user)
         post :mark, params: { marked_ids: [owed_post.id], commit: 'Show in Replies Owed' }
         expect(response).to redirect_to(owed_posts_url)
         expect(flash[:success]).to eq("1 post added to replies owed.")
-        expect(owed_post.post_authors.find_by(user: user).can_owe).to eq(true)
+        expect(author.reload.can_owe).to eq(true)
       end
     end
   end
 
   describe "GET hidden" do
+    let(:user) { create(:user) }
+    let(:board) { create(:board) }
+    let(:post) { create(:post, board: board) }
+
     it "requires login" do
       get :hidden
       expect(response).to redirect_to(root_url)
@@ -3356,8 +3229,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds with board hidden" do
-      user = create(:user)
-      board = create(:board)
       board.ignore(user)
       login_as(user)
       get :hidden
@@ -3367,8 +3238,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds with post hidden" do
-      user = create(:user)
-      post = create(:post)
       post.ignore(user)
       login_as(user)
       get :hidden
@@ -3378,10 +3247,8 @@ RSpec.describe PostsController do
     end
 
     it "succeeds with both hidden" do
-      user = create(:user)
-      post = create(:post)
       post.ignore(user)
-      post.board.ignore(user)
+      board.ignore(user)
       login_as(user)
       get :hidden
       expect(response.status).to eq(200)
@@ -3391,6 +3258,12 @@ RSpec.describe PostsController do
   end
 
   describe "POST unhide" do
+    let(:user) { create(:user) }
+    let(:board) { create(:board) }
+    let(:stay_hidden_board) { create(:board) }
+    let(:hidden_post) { create(:post, board: board)}
+    let(:stay_hidden_post) { create(:post, board: stay_hidden_board)}
+
     it "requires login" do
       post :unhide
       expect(response).to redirect_to(root_url)
@@ -3398,9 +3271,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds for posts" do
-      hidden_post = create(:post)
-      stay_hidden_post = create(:post)
-      user = create(:user)
       hidden_post.ignore(user)
       stay_hidden_post.ignore(user)
       login_as(user)
@@ -3413,9 +3283,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds for board" do
-      board = create(:board)
-      stay_hidden_board = create(:board)
-      user = create(:user)
       board.ignore(user)
       stay_hidden_board.ignore(user)
       login_as(user)
@@ -3428,9 +3295,6 @@ RSpec.describe PostsController do
     end
 
     it "succeeds for both" do
-      board = create(:board)
-      hidden_post = create(:post)
-      user = create(:user)
       board.ignore(user)
       hidden_post.ignore(user)
       login_as(user)

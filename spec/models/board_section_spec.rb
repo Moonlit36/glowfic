@@ -32,7 +32,7 @@ RSpec.describe BoardSection do
 
   it "should reorder upon deletion" do
     create_list(:board_section, 4, board: board)
-    sections = board.sections
+    sections = board.board_sections
     expect(sections.map(&:section_order)).to eq([0, 1, 2, 3])
     sections[1].destroy!
     expect(sections.reload.map(&:section_order)).to eq([0, 1, 2])
@@ -40,7 +40,7 @@ RSpec.describe BoardSection do
 
   it "should reorder upon board change" do
     create_list(:board_section, 4, board: board)
-    sections = board.sections
+    sections = board.board_sections
     expect(sections.map(&:section_order)).to eq([0, 1, 2, 3])
     sections[1].update!(board: create(:board))
     expect(sections.reload.map(&:section_order)).to eq([0, 1, 2])
